@@ -85,13 +85,14 @@ While `make test` checks if the code is correct, `make eval` checks if the agent
 - **Iteration**: When an agent fails an eval, adjust the instructions in `agent.py` or the tool logic and rerun `make eval`.
 
 ### Local Git Hook (CI)
-To prevent pushing broken code, you can use the provided `ci.sh` script as a git hook:
+To ensure all code and behavioral checks pass before pushing, use the provided `ci.sh` script as a git hook:
 
 ```bash
 # Link the CI script as a pre-push hook
 chmod +x ci.sh
 ln -s ../../ci.sh .git/hooks/pre-push
 ```
+The script runs `ruff` (linting), `pytest` (unit tests), and `adk eval` (behavioral evaluation).
 
 ## Deployment
 This template is designed for easy deployment to Vertex AI Agent Engine. When you are ready to deploy:
