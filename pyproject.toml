@@ -1,0 +1,23 @@
+[project]
+name = "adk_agent_template_base"
+version = "0.1.0"
+description = "A base template for ADK agents with multiple architecture examples."
+dependencies = [
+    "google-adk[all]",
+    "pytest",
+    "pytest-asyncio",
+    "ruff",
+    "python-dotenv"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
