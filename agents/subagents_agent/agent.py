@@ -1,5 +1,5 @@
 from google.adk import Agent
-from app.tools import calculate_area_tool, search_tool
+from agents.shared.tools import calculate_area_tool, search_tool
 
 # Subagent for specific tasks (e.g., searching)
 search_agent = Agent(

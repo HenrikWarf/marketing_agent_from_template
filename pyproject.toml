@@ -20,7 +20,7 @@ line-length = 88
 target-version = "py310"
 
 [tool.hatch.build.targets.wheel]
-packages = ["app"]
+packages = ["agents"]
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

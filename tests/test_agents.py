@@ -1,10 +1,12 @@
-from app.simple_agent import agent as simple_agent
-from app.subagents import root_agent
-from app.loop import loop_agent
+from agents.simple_agent.agent import agent as simple_agent
+from agents.subagents_agent.agent import root_agent
+from agents.sequential_agent.agent import sequential_agent
+from agents.loop_agent.agent import loop_agent
 
 def test_agent_initialization():
     assert simple_agent.name == "simple_agent"
     assert root_agent.name == "root_agent"
+    assert sequential_agent.name == "sequential_agent"
     assert loop_agent.name == "loop_agent"
 
 def test_subagent_configuration():

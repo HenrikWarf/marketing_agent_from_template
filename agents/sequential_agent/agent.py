@@ -1,5 +1,5 @@
 from google.adk import Agent
-from app.tools import search_tool
+from agents.shared.tools import search_tool
 
 # Step 1: Research Agent
 researcher = Agent(

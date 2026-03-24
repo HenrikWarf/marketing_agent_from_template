@@ -1,5 +1,5 @@
 from google.adk import Agent
-from app.tools import all_tools
+from agents.shared.tools import all_tools
 
 # Loop Agent example for iterative refinement
 # This agent will try to refine its output until it's satisfied.

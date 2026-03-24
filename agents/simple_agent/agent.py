@@ -1,5 +1,5 @@
 from google.adk import Agent
-from app.tools import all_tools
+from agents.shared.tools import all_tools
 
 # Simple LLM Agent with basic tools
 agent = Agent(
