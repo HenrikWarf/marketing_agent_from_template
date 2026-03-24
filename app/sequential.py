@@ -1,4 +1,4 @@
-from google.adk import Agent, sequence
+from google.adk import Agent
 from app.tools import search_tool
 
 # Step 1: Research Agent
@@ -28,7 +28,7 @@ sequential_agent = Agent(
     name="sequential_agent",
     model="gemini-2.0-flash",
     instruction="Run researcher, analyst, and then writer in order.",
-    agents=[researcher, analyst, writer],
+    sub_agents=[researcher, analyst, writer],
 )
 
 if __name__ == "__main__":

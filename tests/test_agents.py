@@ -1,7 +1,5 @@
-import pytest
 from app.simple_agent import agent as simple_agent
 from app.subagents import root_agent
-from app.sequential import sequential_agent
 from app.loop import loop_agent
 
 def test_agent_initialization():
@@ -11,6 +9,6 @@ def test_agent_initialization():
 
 def test_subagent_configuration():
     # Check if subagents are correctly linked
-    agent_names = [a.name for a in root_agent.agents]
+    agent_names = [a.name for a in root_agent.sub_agents]
     assert "search_agent" in agent_names
     assert "calc_agent" in agent_names

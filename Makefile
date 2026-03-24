@@ -1,7 +1,8 @@
 .PHONY: setup lint test playground clean
 
 setup:
-	uv sync
+	uv venv
+	. .venv/bin/activate && pip install .
 	mkdir -p tests app
 
 lint:
