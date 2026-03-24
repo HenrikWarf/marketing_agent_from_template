@@ -24,7 +24,7 @@ writer = Agent(
 )
 
 # Sequential agent that runs these in order
-sequential_agent = Agent(
+root_agent = Agent(
     name="sequential_agent",
     model="gemini-2.0-flash",
     instruction="Run researcher, analyst, and then writer in order.",
@@ -33,4 +33,4 @@ sequential_agent = Agent(
 
 if __name__ == "__main__":
     # In ADK, sequential flows can be triggered as part of a root agent's logic.
-    sequential_agent.run()
+    root_agent.run()

@@ -3,7 +3,7 @@ from agents.shared.tools import all_tools
 
 # Loop Agent example for iterative refinement
 # This agent will try to refine its output until it's satisfied.
-loop_agent = Agent(
+root_agent = Agent(
     name="loop_agent",
     model="gemini-2.0-flash",
     instruction="""You are a refinement expert. 
@@ -17,4 +17,4 @@ loop_agent = Agent(
 )
 
 if __name__ == "__main__":
-    loop_agent.run()
+    root_agent.run()
