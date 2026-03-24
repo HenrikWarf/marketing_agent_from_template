@@ -30,23 +30,28 @@ make setup
 ```
 
 ### 3. Environment Configuration
-The agents require Google Cloud credentials and configuration to function.
+The agents require authentication to function. You have two primary options:
 
-1. **Copy the example environment file**:
+#### Option A: Gemini API Key (AI Studio)
+Ideal for quick local prototyping without a Google Cloud project.
+1. Get a key at [AI Studio](https://aistudio.google.com/app/apikey).
+2. Update `.env`:
    ```bash
-   cp .env.example .env
+   GOOGLE_API_KEY=your-api-key-here
+   GOOGLE_GENAI_USE_VERTEXAI=False
    ```
 
-2. **Update `.env` with your project details**:
-   ```bash
-   # Open .env and set your values:
-   GOOGLE_CLOUD_PROJECT=your-project-id
-   GOOGLE_CLOUD_LOCATION=us-central1
-   ```
-
-3. **Authenticate with Google Cloud**:
+#### Option B: Vertex AI (Google Cloud)
+Recommended for production features and integration with Google Cloud services.
+1. Authenticate locally:
    ```bash
    gcloud auth application-default login
+   ```
+2. Update `.env`:
+   ```bash
+   GOOGLE_CLOUD_PROJECT=your-project-id
+   GOOGLE_CLOUD_LOCATION=us-central1
+   GOOGLE_GENAI_USE_VERTEXAI=True
    ```
 
 ### 4. Running the Playground
