@@ -73,7 +73,16 @@ make lint
 
 # Run unit tests (pytest)
 make test
+
+# Run behavioral evaluation (adk eval)
+make eval
 ```
+
+### Behavioral Evaluation (ADK Evals)
+While `make test` checks if the code is correct, `make eval` checks if the agent *behaves* correctly.
+- **Evalsets**: Located in `tests/eval/evalsets/`. These define expected tool calls and model responses.
+- **Config**: `tests/eval/eval_config.json` defines metrics (like hallucinations, tool trajectory, and semantic match).
+- **Iteration**: When an agent fails an eval, adjust the instructions in `agent.py` or the tool logic and rerun `make eval`.
 
 ### Local Git Hook (CI)
 To prevent pushing broken code, you can use the provided `ci.sh` script as a git hook:

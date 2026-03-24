@@ -1,0 +1,26 @@
+{
+  "eval_set_id": "simple_search_test",
+  "name": "Simple Search Test",
+  "description": "Tests basic search and summarization capability.",
+  "eval_cases": [
+    {
+      "eval_id": "capital_of_france",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "What is the capital of France and its current population?" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "The capital of France is Paris. Its population is approximately 2.1 million within the city limits." }]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "google_search", "args": { "queries": ["capital of France population"] } }
+            ]
+          }
+        }
+      ],
+      "session_input": { "app_name": "simple_agent", "user_id": "eval_user", "state": {} }
+    }
+  ]
+}

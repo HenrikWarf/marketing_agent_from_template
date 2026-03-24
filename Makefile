@@ -11,6 +11,9 @@ lint:
 test:
 	uv run pytest
 
+eval:
+	uv run adk eval agents/simple_agent/ tests/eval/evalsets/simple_search.json --config_file_path=tests/eval/eval_config.json --print_detailed_results
+
 playground:
 	uv run adk web agents/
 
