@@ -1,9 +1,13 @@
-.PHONY: setup lint test playground clean
+.PHONY: setup gcp-setup lint test playground clean
 
 setup:
 	uv venv
 	uv pip install .
 	mkdir -p tests agents
+
+gcp-setup:
+	chmod +x ./setup_gcp.sh
+	./setup_gcp.sh
 
 lint:
 	uv run ruff check .

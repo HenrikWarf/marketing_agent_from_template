@@ -20,6 +20,7 @@ This template follows a robust **Local -> Remote Dev -> Remote Prod** flow.
 
 ### 1. Local Development
 Iterate on your agent and tools locally.
+- **Setup**: `make setup` followed by `make gcp-setup` to enable APIs and authenticate.
 - **Playground**: `make playground` (interactive test of all agents).
 - **Custom UI**: `make ui` (starts a simple chat interface at http://localhost:3000).
 - **Checks**: `make lint`, `make test`, `make eval`.

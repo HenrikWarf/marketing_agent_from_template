@@ -15,6 +15,9 @@ make setup
 # Configure environment
 cp .env.example .env
 # Update .env with your GOOGLE_API_KEY (AI Studio) or GOOGLE_CLOUD_PROJECT (Vertex AI)
+
+# Enable GCP APIs and authenticate (if using Vertex AI)
+make gcp-setup
 ```
 
 ### 2. Rapid Iteration (The Playground)
