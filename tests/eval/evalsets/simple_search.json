@@ -16,11 +16,13 @@
           "intermediate_data": {
             "tool_uses": [
               { "name": "google_search", "args": { "queries": ["capital of France population"] } }
-            ]
+            ],
+            "intermediate_responses": []
           }
         }
       ],
-      "session_input": { "app_name": "simple_agent", "user_id": "eval_user", "state": {} }
+      "session_input": { "app_name": "simple_agent", "user_id": "eval_user", "state": {} },
+      "conversation_scenario": null
     }
   ]
 }

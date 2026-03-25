@@ -1,8 +1,6 @@
 import asyncio
 from typing import Annotated
-from google.adk.tools import FunctionTool, google_search, McpToolset
-from google.adk.tools.mcp_tool import StdioConnectionParams
-from mcp import StdioServerParameters
+from google.adk.tools import FunctionTool, google_search
 
 # 1. Pure Function Tool
 def calculate_area(
@@ -26,9 +24,14 @@ async def mcp_query(
 
 mcp_query_tool = FunctionTool(mcp_query)
 
-# 3. Real MCP Toolset Example
+# 3. Real MCP Toolset Example (Commented out by default to avoid environment issues)
 # This connects to a local MCP server (e.g., the filesystem server)
-# In a real app, you would define actual connection parameters.
+# To use this, ensure Node.js is installed and you have access to the registry.
+"""
+from google.adk.tools import McpToolset
+from google.adk.tools.mcp_tool import StdioConnectionParams
+from mcp import StdioServerParameters
+
 mcp_toolset = McpToolset(
     connection_params=StdioConnectionParams(
         server_params=StdioServerParameters(
@@ -37,9 +40,12 @@ mcp_toolset = McpToolset(
         )
     )
 )
+"""
 
 # 4. Google Search Grounding (Built-in)
 # We re-export or use the built-in google_search tool.
 search_tool = google_search
 
-all_tools = [calculate_area_tool, mcp_toolset, search_tool]
+# For the base template, we use the conceptual tool instead of the real toolset
+# to ensure it runs out-of-the-box without registry auth issues.
+all_tools = [calculate_area_tool, mcp_query_tool, search_tool]
