@@ -14,85 +14,32 @@ A comprehensive starting point for building, testing, and deploying agents using
   - **Google Search Grounding**: Real-time search using Google Search.
 - **Developer Suite**: Local `adk web` playground, `pytest` for unit testing, and `ruff` for linting.
 
-## Getting Started
+## Developer Flow
 
-### 1. Prerequisites
-- **Python 3.12+**
-- **uv** (recommended for package management)
-- **Node.js** (required for MCP filesystem server example)
+This template follows a robust **Local -> Remote Dev -> Remote Prod** flow.
 
-### 2. Initial Setup
-If you just cloned this repository, follow these steps to set up your environment:
+### 1. Local Development
+Iterate on your agent and tools locally.
+- **Playground**: `make playground` (interactive test of all agents).
+- **Custom UI**: `make ui` (starts a simple chat interface at http://localhost:3000).
+- **Checks**: `make lint`, `make test`, `make eval`.
 
-```bash
-# Install dependencies and create a virtual environment
-make setup
-```
+### 2. Deployment to Remote (Manual)
+When you are ready to test in a cloud environment:
+- **Dev**: `make deploy-dev` (requires `GOOGLE_CLOUD_PROJECT` to be set to your dev project).
+- **Prod**: `make deploy-prod` (usually reserved for CI/CD, but available for manual deployment).
 
-### 3. Environment Configuration
-The agents require authentication to function. You have two primary options:
+### 3. CI/CD (GitHub Actions)
+The project is scaffolded with GitHub Actions:
+- **PR Checks**: Automatically runs linting and tests on every Pull Request.
+- **Staging**: Merging to `main` triggers deployment to your **Staging** Agent Engine.
+- **Production**: After staging deployment and testing, a manual approval in GitHub Actions promotes the agent to **Production**.
 
-#### Option A: Gemini API Key (AI Studio)
-Ideal for quick local prototyping without a Google Cloud project.
-1. Get a key at [AI Studio](https://aistudio.google.com/app/apikey).
-2. Update `.env`:
-   ```bash
-   GOOGLE_API_KEY=your-api-key-here
-   GOOGLE_GENAI_USE_VERTEXAI=False
-   ```
-
-#### Option B: Vertex AI (Google Cloud)
-Recommended for production features and integration with Google Cloud services.
-1. Authenticate locally:
-   ```bash
-   gcloud auth application-default login
-   ```
-2. Update `.env`:
-   ```bash
-   GOOGLE_CLOUD_PROJECT=your-project-id
-   GOOGLE_CLOUD_LOCATION=us-central1
-   GOOGLE_GENAI_USE_VERTEXAI=True
-   ```
-
-### 4. Running the Playground
-Start the interactive web-based playground to chat with your agents:
-
-```bash
-make playground
-```
-This will start a server, usually at `http://127.0.0.1:8000`. You will find all four agent types available for selection in the UI.
-
-## Development & CI
-
-### Automated Checks
-Run the linter and tests to ensure your changes are correct:
-
-```bash
-# Run linting (ruff)
-make lint
-
-# Run unit tests (pytest)
-make test
-
-# Run behavioral evaluation (adk eval)
-make eval
-```
-
-### Behavioral Evaluation (ADK Evals)
-While `make test` checks if the code is correct, `make eval` checks if the agent *behaves* correctly.
-- **Evalsets**: Located in `tests/eval/evalsets/`. These define expected tool calls and model responses.
-- **Config**: `tests/eval/eval_config.json` defines metrics (like hallucinations, tool trajectory, and semantic match).
-- **Iteration**: When an agent fails an eval, adjust the instructions in `agent.py` or the tool logic and rerun `make eval`.
-
-### Local Git Hook (CI)
-To ensure all code and behavioral checks pass before pushing, use the provided `ci.sh` script as a git hook:
-
-```bash
-# Link the CI script as a pre-push hook
-chmod +x ci.sh
-ln -s ../../ci.sh .git/hooks/pre-push
-```
-The script runs `ruff` (linting), `pytest` (unit tests), and `adk eval` (behavioral evaluation).
+## Custom Chat UI
+A simple, modern chat interface is provided in `frontend/`. 
+- To run locally: `make ui`.
+- The UI uses SSE (Server-Sent Events) to stream agent responses.
+- It can be connected to remote endpoints by updating the `baseUrl` in `frontend/static/index.html`.
 
 ## Deployment
 This template is designed for easy deployment to Vertex AI Agent Engine. When you are ready to deploy:
