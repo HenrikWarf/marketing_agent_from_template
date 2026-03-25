@@ -35,6 +35,21 @@ The project is scaffolded with GitHub Actions:
 - **Staging**: Merging to `main` triggers deployment to your **Staging** Agent Engine.
 - **Production**: After staging deployment and testing, a manual approval in GitHub Actions promotes the agent to **Production**.
 
+#### CI/CD Setup (One-time)
+To activate the automated flow, run the following command from your local terminal:
+```bash
+uvx agent-starter-pack setup-cicd \
+  --staging-project YOUR_PROJECT_ID \
+  --prod-project YOUR_PROJECT_ID \
+  --repository-name adk_base_template \
+  --repository-owner HenrikWarf
+```
+*Note: You can use the same Project ID for both staging and production; the system will create two distinct Agent Engine instances within that project.*
+
+## Alternative Deployment: Cloud Run
+While this template defaults to **Agent Engine** (managed), ADK also supports deployment to **Cloud Run**. Cloud Run offers more control over the container environment and scaling but requires a Dockerfile. To switch a project to Cloud Run, you would use:
+`uvx agent-starter-pack enhance . --deployment-target cloud_run`
+
 ## Custom Chat UI
 A simple, modern chat interface is provided in `frontend/`. 
 - To run locally: `make ui`.
