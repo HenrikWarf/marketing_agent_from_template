@@ -59,22 +59,36 @@ Use the provided notebook to query your deployed engine via the Python SDK.
 ## Phase 3: CI/CD Pipeline (Staging & Prod)
 Automated via **GitHub Actions**. This flow ensures that only verified code reaches production.
 
-### 1. Pull Request (CI)
-- **Trigger**: Push a branch and open a PR to `main`.
-- **Action**: Runs `make lint` and `make test`.
-- **Goal**: Prevent breaking the codebase.
+### 1. The `setup-cicd` Foundation (One-time Setup)
+The link between GitHub and Google Cloud is established via:
+- **Workload Identity Federation (WIF)**: Secure, keyless authentication between GitHub Actions and GCP.
+- **Service Accounts**: 
+    - `cicd_runner_sa`: Executes the pipeline and manages infrastructure.
+    - `app_sa`: The identity used by the agent at runtime (scoped to each environment).
+- **Terraform State**: Managed in a GCS bucket (`{cicd_project}-terraform-state`) to ensure consistent infra tracking.
 
-### 2. Merge to Main (Staging CD)
-- **Trigger**: Merge PR into the `main` branch.
-- **Action**: 
-    - Provisions/Updates infrastructure via **Terraform**.
-    - Deploys to **Staging** Agent Engine.
-    - Runs **Load Tests** (Locust) to verify performance.
+### 2. Infrastructure as Code (Terraform)
+Terraform files in `deployment/terraform/` manage the "shell" of your agent:
+- **`service.tf`**: Manages the `google_vertex_ai_reasoning_engine` (Agent Engine) instance settings (scaling, limits).
+- **`iam.tf`**: Defines least-privilege roles for the agent and runner.
+- **`storage.tf`**: Provisions GCS buckets for agent artifacts and logs.
 
-### 3. Production Promotion (Prod CD)
-- **Trigger**: Successful Staging deployment.
-- **Action**: Pauses for **Manual Approval** in the GitHub Actions tab.
-- **Goal**: Final human sign-off before the agent is live for users.
+### 3. CI/CD Logic
+- **Pull Request (CI)**:
+    - **Trigger**: Push a branch and open a PR to `main`.
+    - **Action**: Runs `make lint` and `make test`.
+    - **Goal**: Prevent breaking the codebase.
+- **Merge to Main (Staging CD)**:
+    - **Trigger**: Merge PR into the `main` branch.
+    - **Action**: 
+        - **Auth**: Connects via WIF tokens.
+        - **Infra**: Applies Terraform changes for Staging.
+        - **Deploy**: Packages source code as a tarball and pushes to Agent Engine.
+        - **Test**: Runs **Load Tests** (Locust) to verify performance.
+- **Production Promotion (Prod CD)**:
+    - **Trigger**: Successful Staging deployment.
+    - **Action**: Pauses for **Manual Approval** in the GitHub Actions tab.
+    - **Goal**: Final human sign-off before the agent is live.
 
 ---
 
@@ -83,6 +97,7 @@ To use your custom Chat UI with a deployed agent:
 
 1. **Endpoint Configuration**: Update the `baseUrl` in `frontend/static/index.html` to point to your Cloud Run or Agent Engine URL.
 2. **Authentication**: If using Vertex AI or IAP, ensure the request includes the required `Authorization: Bearer` token.
+3. **Deployment Mechanism**: Agent Engine uses **source-based deployment** (no Docker). The `deploy.py` script exports requirements and bundles the `agents/` directory for the Vertex AI Reasoning Engine service.
 
 ---
 
