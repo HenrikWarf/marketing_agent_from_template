@@ -52,8 +52,11 @@ While this template defaults to **Agent Engine** (managed), ADK also supports de
 
 ## Custom Chat UI
 A simple, modern chat interface is provided in `frontend/`. 
-- To run locally: `make ui`.
-- The UI uses SSE (Server-Sent Events) to stream agent responses.
+- To run locally: 
+  1. Start the agent backend: `make playground`.
+  2. In a new terminal, start the UI: `make ui`.
+  3. Open http://localhost:3000 in your browser.
+- The UI uses SSE (Server-Sent Events) to stream agent responses from the backend.
 - It can be connected to remote endpoints by updating the `baseUrl` in `frontend/static/index.html`.
 
 ## Deployment

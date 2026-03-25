@@ -2,7 +2,7 @@
 
 setup:
 	uv venv
-	. .venv/bin/activate && pip install .
+	uv pip install .
 	mkdir -p tests agents
 
 lint:
@@ -18,7 +18,9 @@ playground:
 	uv run adk web agents/
 
 ui:
-	uv run python frontend/app.py
+	@echo "Starting Custom UI at http://localhost:3000..."
+	@echo "Note: Ensure 'make playground' is running in another terminal!"
+	.venv/bin/python frontend/app.py
 
 deploy-dev:
 	@echo "Deploying to DEV environment..."
