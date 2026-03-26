@@ -1,16 +1,14 @@
-from agents.simple_agent.agent import root_agent as simple_agent
-from agents.subagents_agent.agent import root_agent as sub_root_agent
-from agents.sequential_agent.agent import root_agent as sequential_agent
-from agents.loop_agent.agent import root_agent as loop_agent
+from agents.marketing_agent.agent import root_agent as marketing_agent
 
-def test_agent_initialization():
-    assert simple_agent.name == "simple_agent"
-    assert sub_root_agent.name == "root_agent"
-    assert sequential_agent.name == "sequential_agent"
-    assert loop_agent.name == "loop_agent"
+def test_marketing_agent_initialization():
+    assert marketing_agent.name == "marketing_orchestrator"
+    assert len(marketing_agent.sub_agents) == 4
+    
+    sub_agent_names = [a.name for a in marketing_agent.sub_agents]
+    assert "analysis_agent" in sub_agent_names
+    assert "segmentation_agent" in sub_agent_names
+    assert "content_agent" in sub_agent_names
+    assert "reviewer_agent" in sub_agent_names
 
-def test_subagent_configuration():
-    # Check if subagents are correctly linked
-    agent_names = [a.name for a in sub_root_agent.sub_agents]
-    assert "search_agent" in agent_names
-    assert "calc_agent" in agent_names
+def test_marketing_agent_description():
+    assert "marketing system orchestrator" in marketing_agent.instruction.lower()

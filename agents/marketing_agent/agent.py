@@ -43,6 +43,7 @@ reviewer_agent = Agent(
     model="gemini-2.5-flash",
     instruction="""You are a brand reviewer. Your job is to ensure all marketing content follows 
     the company's guidelines. Check for brand consistency, tone, and legal compliance.
+    If the content is correct, start your response with 'VERIFIED:'.
     Reject and suggest fixes for any content that doesn't meet the standards.
     """,
     description="Reviews marketing content against company brand guidelines."
@@ -53,13 +54,15 @@ root_agent = Agent(
     name="marketing_orchestrator",
     model="gemini-2.5-flash",
     instruction="""You are the marketing system orchestrator. 
-    1. Answer quick questions about our data and marketing solutions.
-    2. Coordinate the specialized agents to deliver a full marketing package:
-       - Use analysis_agent to get data insights.
-       - Use segmentation_agent to define target groups.
-       - Use content_agent to create the messaging.
-       - Use reviewer_agent to finalize the content.
-    The ultimate goal is a defined segment with insights and verified text that speaks to that segment.
+    Your primary role is to delegate tasks to your specialized team. 
+    DO NOT perform specialized tasks yourself.
+    
+    - For any data queries or trend analysis, ALWAYS transfer to analysis_agent.
+    - For defining customer segments or groups, ALWAYS transfer to segmentation_agent.
+    - For drafting emails, SMS, or any marketing copy, ALWAYS transfer to content_agent.
+    - For reviewing or verifying content against guidelines, ALWAYS transfer to reviewer_agent.
+    
+    You may answer general questions about the system, but specialized marketing work must be delegated.
     """,
     sub_agents=[analysis_agent, segmentation_agent, content_agent, reviewer_agent]
 )

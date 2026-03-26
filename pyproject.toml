@@ -10,7 +10,8 @@ dependencies = [
     "ruff",
     "python-dotenv",
     "fastapi",
-    "uvicorn"
+    "uvicorn",
+    "locust"
 ]
 
 [build-system]
@@ -27,3 +28,4 @@ packages = ["agents"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+addopts = "--ignore=tests/load_test/"

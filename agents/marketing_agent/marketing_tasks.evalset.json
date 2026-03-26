@@ -1,0 +1,75 @@
+{
+  "eval_set_id": "marketing_subagent_tasks",
+  "name": "Marketing Sub-agent Task Delegation",
+  "description": "Tests the orchestrator's ability to delegate specific tasks to the correct sub-agents.",
+  "eval_cases": [
+    {
+      "eval_id": "data_analysis_task",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Run a query to find the top product categories by revenue in the last 6 months." }] },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "transfer_to_agent", "args": { "agent_name": "analysis_agent" } }
+            ]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
+    },
+    {
+      "eval_id": "segmentation_task",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "We have high electronics sales. Can you define 3 segments for these buyers?" }] },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "transfer_to_agent", "args": { "agent_name": "segmentation_agent" } }
+            ]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
+    },
+    {
+      "eval_id": "content_creation_task",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Draft a 20% discount email for our 'Frequent Shoppers' segment." }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "I've drafted the 20% discount email for our Frequent Shoppers segment." }]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "transfer_to_agent", "args": { "agent_name": "content_agent" } }
+            ]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
+    },
+    {
+      "eval_id": "brand_review_task",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "Verify if this text meets our brand guidelines: 'Flash Sale: Everything must go!'" }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "The content has been reviewed. It was rejected because the phrase 'Everything must go!' is too broad and potentially misleading. Suggested fixes include adding a time limit or being more specific about which items are on sale." }]
+          },
+          "intermediate_data": {
+            "tool_uses": [
+              { "name": "transfer_to_agent", "args": { "agent_name": "reviewer_agent" } }
+            ]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
+    }
+  ]
+}

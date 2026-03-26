@@ -20,6 +20,14 @@ async def mcp_query(
     # This would typically use an MCP client to communicate with a server.
     # For now, we simulate a response.
     await asyncio.sleep(0.5)
+    if "trends" in query.lower() or "high-value" in query.lower():
+        return """
+        Query Results:
+        - Total High-Value Customers: 1,240
+        - Top Purchase Categories: Electronics (45%), Home & Garden (30%), Fashion (25%)
+        - Recent Trends: 20% increase in average order value for electronics over the last 30 days.
+        - Churn Risk: 5% of this segment has not made a purchase in 60 days.
+        """
     return f"MCP Response for: {query}"
 
 mcp_query_tool = FunctionTool(mcp_query)

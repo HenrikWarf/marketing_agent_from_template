@@ -15,8 +15,11 @@ lint:
 test:
 	uv run pytest
 
+AGENT ?= agents/marketing_agent/
+EVALSET ?= tests/eval/evalsets/marketing_campaign.evalset.json
+
 eval:
-	uv run adk eval agents/simple_agent/ tests/eval/evalsets/simple_search.json --config_file_path=tests/eval/eval_config.json --print_detailed_results
+	uv run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
 
 playground:
 	uv run adk web agents/
@@ -46,10 +49,13 @@ clean:
 backend: deploy
 
 deploy:
+	# Load GOOGLE_CLOUD_PROJECT from .env if not already set
+	$(eval GOOGLE_CLOUD_PROJECT=$(shell grep GOOGLE_CLOUD_PROJECT .env | cut -d '=' -f2))
 	# Export dependencies to requirements file using uv export.
 	(uv export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > agents/app_utils/.requirements.txt 2>/dev/null || \
 	uv export --no-hashes --no-header --no-dev --no-emit-project > agents/app_utils/.requirements.txt) && \
 	uv run -m agents.app_utils.deploy \
+		--project=$(GOOGLE_CLOUD_PROJECT) \
 		--source-packages=./agents \
 		--entrypoint-module=agents.agent_engine_app \
 		--entrypoint-object=agent_engine \
