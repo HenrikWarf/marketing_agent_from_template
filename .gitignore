@@ -3,3 +3,4 @@ __pycache__/
 *.log
 .env
 uv.lock
+\n# Terraform\n.terraform/\n*.tfstate\n*.tfstate.*

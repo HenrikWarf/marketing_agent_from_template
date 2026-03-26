@@ -14,7 +14,7 @@
 
 # BigQuery dataset for telemetry external tables
 resource "google_bigquery_dataset" "telemetry_dataset" {
-  for_each      = local.deploy_project_ids
+  for_each      = local.unique_deploy_project_ids
   project       = each.value
   dataset_id    = replace("${var.project_name}_telemetry", "-", "_")
   friendly_name = "${var.project_name} Telemetry"
@@ -25,7 +25,7 @@ resource "google_bigquery_dataset" "telemetry_dataset" {
 
 # BigQuery connection for accessing GCS telemetry data
 resource "google_bigquery_connection" "genai_telemetry_connection" {
-  for_each      = local.deploy_project_ids
+  for_each      = local.unique_deploy_project_ids
   project       = each.value
   location      = var.region
   connection_id = "${var.project_name}-genai-telemetry"
@@ -38,7 +38,7 @@ resource "google_bigquery_connection" "genai_telemetry_connection" {
 
 # Wait for the BigQuery connection service account to propagate in IAM
 resource "time_sleep" "wait_for_bq_connection_sa" {
-  for_each = local.deploy_project_ids
+  for_each = local.unique_deploy_project_ids
 
   create_duration = "10s"
 
@@ -47,7 +47,7 @@ resource "time_sleep" "wait_for_bq_connection_sa" {
 
 # Grant the BigQuery connection service account access to read from the logs bucket
 resource "google_storage_bucket_iam_member" "telemetry_connection_access" {
-  for_each = local.deploy_project_ids
+  for_each = local.unique_deploy_project_ids
   bucket   = google_storage_bucket.logs_data_bucket[each.value].name
   role     = "roles/storage.objectViewer"
   member   = "serviceAccount:${google_bigquery_connection.genai_telemetry_connection[each.key].cloud_resource[0].service_account_id}"
@@ -61,7 +61,7 @@ resource "google_storage_bucket_iam_member" "telemetry_connection_access" {
 
 # Wait for the Logging API to fully propagate after enablement
 resource "time_sleep" "wait_for_logging_api" {
-  for_each = local.deploy_project_ids
+  for_each = local.unique_deploy_project_ids
 
   create_duration = "30s"
 
@@ -70,7 +70,7 @@ resource "time_sleep" "wait_for_logging_api" {
 
 # Create a custom Cloud Logging bucket for GenAI telemetry logs with long-term retention
 resource "google_logging_project_bucket_config" "genai_telemetry_bucket" {
-  for_each         = local.deploy_project_ids
+  for_each         = local.unique_deploy_project_ids
   project          = each.value
   location         = var.region
   bucket_id        = "${var.project_name}-genai-telemetry"
@@ -85,9 +85,9 @@ resource "google_logging_project_bucket_config" "genai_telemetry_bucket" {
 # Filter by bucket name in the GCS path (which includes project_name) to isolate this agent's logs
 resource "google_logging_project_sink" "genai_logs_to_bucket" {
   for_each    = local.deploy_project_ids
-  name        = "${var.project_name}-genai-logs"
+  name        = "${var.project_name}-genai-logs-${each.key}"
   project     = each.value
-  destination = "logging.googleapis.com/projects/${each.value}/locations/${var.region}/buckets/${google_logging_project_bucket_config.genai_telemetry_bucket[each.key].bucket_id}"
+  destination = "logging.googleapis.com/projects/${each.value}/locations/${var.region}/buckets/${google_logging_project_bucket_config.genai_telemetry_bucket[each.value].bucket_id}"
   filter      = "log_name=\"projects/${each.value}/logs/gen_ai.client.inference.operation.details\" AND (labels.\"gen_ai.input.messages_ref\" =~ \".*${var.project_name}.*\" OR labels.\"gen_ai.output.messages_ref\" =~ \".*${var.project_name}.*\")"
 
   unique_writer_identity = true
@@ -96,7 +96,7 @@ resource "google_logging_project_sink" "genai_logs_to_bucket" {
 
 # Create a linked dataset to the GenAI telemetry logs bucket for querying via BigQuery
 resource "google_logging_linked_dataset" "genai_logs_linked_dataset" {
-  for_each    = local.deploy_project_ids
+  for_each    = local.unique_deploy_project_ids
   link_id     = replace("${var.project_name}_genai_telemetry_logs", "-", "_")
   bucket      = google_logging_project_bucket_config.genai_telemetry_bucket[each.key].bucket_id
   description = "Linked dataset for ${var.project_name} GenAI telemetry Cloud Logging bucket"
@@ -111,7 +111,7 @@ resource "google_logging_linked_dataset" "genai_logs_linked_dataset" {
 
 # Wait for linked dataset to fully propagate
 resource "time_sleep" "wait_for_linked_dataset" {
-  for_each = local.deploy_project_ids
+  for_each = local.unique_deploy_project_ids
 
   create_duration = "10s"
 
@@ -125,9 +125,9 @@ resource "time_sleep" "wait_for_linked_dataset" {
 # Log sink for user feedback logs - routes to the same Cloud Logging bucket
 resource "google_logging_project_sink" "feedback_logs_to_bucket" {
   for_each    = local.deploy_project_ids
-  name        = "${var.project_name}-feedback"
+  name        = "${var.project_name}-feedback-${each.key}"
   project     = each.value
-  destination = "logging.googleapis.com/projects/${each.value}/locations/${var.region}/buckets/${google_logging_project_bucket_config.genai_telemetry_bucket[each.key].bucket_id}"
+  destination = "logging.googleapis.com/projects/${each.value}/locations/${var.region}/buckets/${google_logging_project_bucket_config.genai_telemetry_bucket[each.value].bucket_id}"
   filter      = var.feedback_logs_filter
 
   unique_writer_identity = true
@@ -140,7 +140,7 @@ resource "google_logging_project_sink" "feedback_logs_to_bucket" {
 
 # External table for completions data (messages/parts) stored in GCS
 resource "google_bigquery_table" "completions_external_table" {
-  for_each            = local.deploy_project_ids
+  for_each            = local.unique_deploy_project_ids
   project             = each.value
   dataset_id          = google_bigquery_dataset.telemetry_dataset[each.key].dataset_id
   table_id            = "completions"
@@ -190,7 +190,7 @@ resource "google_bigquery_table" "completions_external_table" {
 
 # View that joins Cloud Logging data with GCS-stored completions data
 resource "google_bigquery_table" "completions_view" {
-  for_each            = local.deploy_project_ids
+  for_each            = local.unique_deploy_project_ids
   project             = each.value
   dataset_id          = google_bigquery_dataset.telemetry_dataset[each.key].dataset_id
   table_id            = "completions_view"

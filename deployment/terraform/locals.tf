@@ -35,16 +35,21 @@ locals {
     "telemetry.googleapis.com",
   ]
 
+  # Use a map of unique project IDs for resource creation
+  unique_deploy_project_ids = {
+    for id in distinct([var.prod_project_id, var.staging_project_id]) : id => id
+  }
+
   deploy_project_ids = {
     prod    = var.prod_project_id
     staging = var.staging_project_id
   }
 
-  all_project_ids = [
+  all_project_ids = distinct([
     var.cicd_runner_project_id,
     var.prod_project_id,
     var.staging_project_id
-  ]
+  ])
 
 }
 

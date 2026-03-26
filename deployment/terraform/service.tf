@@ -23,8 +23,8 @@ data "google_storage_bucket_object_content" "dummy_source_b64" {
 resource "google_vertex_ai_reasoning_engine" "app" {
   for_each = local.deploy_project_ids
 
-  display_name = var.project_name
-  description  = "Agent deployed via Terraform"
+  display_name = "${var.project_name}-${each.key}"
+  description  = "Agent deployed via Terraform (${each.key})"
   region       = var.region
   project      = each.value
 

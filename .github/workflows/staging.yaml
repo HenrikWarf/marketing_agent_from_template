@@ -61,6 +61,7 @@ jobs:
           uv run python -m agents.app_utils.deploy \
             --project ${{ vars.STAGING_PROJECT_ID }} \
             --location ${{ vars.REGION }} \
+            --display-name="marketing-agent-staging" \
             --source-packages=./agents \
             --entrypoint-module=agents.agent_engine_app \
             --entrypoint-object=agent_engine \
