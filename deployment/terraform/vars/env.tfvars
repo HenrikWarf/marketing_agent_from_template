@@ -5,7 +5,7 @@ project_name = "marketing-agent"
 prod_project_id = "marketing-agent-01-491314"
 
 # Your Staging / Test Google Cloud project id
-staging_project_id = "ml-developer-project-fe07"
+staging_project_id = "marketing-agent-01-491314"
 
 # Your Google Cloud project ID that will be used to host the Cloud Build pipelines.
 cicd_runner_project_id = "marketing-agent-01-491314"
