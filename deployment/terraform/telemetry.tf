@@ -73,7 +73,7 @@ resource "google_logging_project_bucket_config" "genai_telemetry_bucket" {
   for_each         = local.unique_deploy_project_ids
   project          = each.value
   location         = var.region
-  bucket_id        = "${var.project_name}-genai-telemetry"
+  bucket_id        = "${var.project_name}-genai-telemetry-v2"
   retention_days   = 3650  # 10 years retention (maximum allowed)
   enable_analytics = true  # Required for linked datasets
   description      = "Dedicated Cloud Logging bucket for ${var.project_name} GenAI telemetry with 10 year retention"
