@@ -15,7 +15,7 @@
 import os
 import google.auth
 from google.adk.apps import App
-from agents.simple_agent.agent import root_agent as simple_root_agent
+from agents.marketing_agent.agent import root_agent as marketing_root_agent
 
 # Initialize project ID from default credentials if not set
 try:
@@ -27,8 +27,8 @@ except Exception:
 os.environ.setdefault("GOOGLE_CLOUD_LOCATION", "us-central1")
 os.environ.setdefault("GOOGLE_GENAI_USE_VERTEXAI", "True")
 
-# For the single deployment entrypoint, we use the simple_agent as the root
-root_agent = simple_root_agent
+# For the single deployment entrypoint, we use the marketing_agent as the root
+root_agent = marketing_root_agent
 
 app = App(
     root_agent=root_agent,

@@ -29,6 +29,8 @@ REQUIRED_APIS=(
   "cloudtrace.googleapis.com"
   "bigquery.googleapis.com"
   "serviceusage.googleapis.com"
+  "cloudaicompanion.googleapis.com"
+  "generativelanguage.googleapis.com"
 )
 
 echo "--------------------------------------------------------"

@@ -22,8 +22,9 @@ playground:
 	uv run adk web agents/
 
 ui:
-	@echo "Starting Custom UI at http://localhost:3000..."
-	@echo "Note: Ensure 'make playground' is running in another terminal!"
+	@echo "Starting ADK API Server and Custom UI..."
+	# Run api_server in the background so it's available for the UI
+	uv run adk api_server agents/ --auto_create_session & \
 	.venv/bin/python frontend/app.py
 
 deploy-dev:
