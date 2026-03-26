@@ -79,6 +79,10 @@ resource "google_logging_project_bucket_config" "genai_telemetry_bucket" {
   description      = "Dedicated Cloud Logging bucket for ${var.project_name} GenAI telemetry with 10 year retention"
 
   depends_on = [time_sleep.wait_for_logging_api]
+
+  lifecycle {
+    prevent_destroy = true
+  }
 }
 
 # Log sink to route only GenAI telemetry logs to the dedicated bucket
