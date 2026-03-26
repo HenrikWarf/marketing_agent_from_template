@@ -81,7 +81,7 @@ resource "google_logging_project_bucket_config" "genai_telemetry_bucket" {
   depends_on = [time_sleep.wait_for_logging_api]
 
   lifecycle {
-    prevent_destroy = true
+    prevent_destroy = false
   }
 }
 
