@@ -37,13 +37,13 @@ ui:
 deploy-dev:
 	@echo "Deploying to DEV environment..."
 	# Set environment variables for DEV
-	$(MAKE) deploy
+	$(MAKE) deploy ENV=dev
 
 deploy-prod:
 	@echo "Deploying to PROD environment..."
 	# Set environment variables for PROD
 	# Usually triggered via CI/CD, but can be done manually if approved
-	$(MAKE) deploy
+	$(MAKE) deploy ENV=prod
 
 clean:
 	rm -rf .venv/ __pycache__/ .pytest_cache/ .ruff_cache/
@@ -55,11 +55,15 @@ backend: deploy
 deploy:
 	# Load GOOGLE_CLOUD_PROJECT from .env if not already set
 	$(eval GOOGLE_CLOUD_PROJECT=$(shell grep GOOGLE_CLOUD_PROJECT .env | cut -d '=' -f2))
+	# Load AGENT_DISPLAY_NAME from .env and append environment suffix if set
+	$(eval BASE_NAME=$(shell grep AGENT_DISPLAY_NAME .env | cut -d '=' -f2))
+	$(eval FINAL_NAME=$(if $(ENV),$(BASE_NAME)-$(ENV),$(BASE_NAME)))
 	# Export dependencies to requirements file using uv export.
 	(uv export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > agents/app_utils/.requirements.txt 2>/dev/null || \
 	uv export --no-hashes --no-header --no-dev --no-emit-project > agents/app_utils/.requirements.txt) && \
 	uv run -m agents.app_utils.deploy \
 		--project=$(GOOGLE_CLOUD_PROJECT) \
+		--display-name="$(FINAL_NAME)" \
 		--source-packages=./agents \
 		--entrypoint-module=agents.agent_engine_app \
 		--entrypoint-object=agent_engine \
