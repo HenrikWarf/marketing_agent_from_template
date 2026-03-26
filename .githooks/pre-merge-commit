@@ -1,0 +1,27 @@
+#!/bin/bash
+
+# Get the current branch name
+current_branch=$(git rev-parse --abbrev-ref HEAD)
+
+# Run checks only for main and dev branches
+if [[ "$current_branch" == "main" || "$current_branch" == "dev" ]]; then
+    echo "🔍 Merging into $current_branch. Running checks..."
+    
+    # Run lint
+    make lint
+    if [ $? -ne 0 ]; then
+        echo "❌ Linting failed. Merge aborted."
+        exit 1
+    fi
+
+    # Run tests
+    make test
+    if [ $? -ne 0 ]; then
+        echo "❌ Tests failed. Merge aborted."
+        exit 1
+    fi
+    
+    echo "✅ Checks passed. Proceeding with merge."
+fi
+
+exit 0

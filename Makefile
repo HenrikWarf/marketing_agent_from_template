@@ -1,4 +1,8 @@
-.PHONY: setup gcp-setup lint test playground clean
+.PHONY: setup gcp-setup lint test playground clean setup-hooks
+
+setup-hooks:
+	chmod +x .githooks/pre-merge-commit
+	git config core.hooksPath .githooks
 
 setup:
 	uv venv
