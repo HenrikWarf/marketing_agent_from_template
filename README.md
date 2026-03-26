@@ -1,18 +1,19 @@
-# ADK Agent Base Template
+# Marketing Agent - ADK Orchestration Template
 
-A comprehensive starting point for building, testing, and deploying agents using the Google ADK (Agent Development Kit). This template includes examples of multiple agent architectures and tooling integrations.
+A comprehensive AI-driven marketing system built with the Google ADK (Agent Development Kit). This template demonstrates a sophisticated multi-agent orchestration pattern for automating data-driven marketing workflows—from BigQuery analysis to personalized content creation.
 
 ## Features
-- **Multiple Agent Types**:
-  - `simple_agent`: A direct LLM-based assistant.
-  - `subagents_agent`: A root agent coordinating specialized sub-agents.
-  - `sequential_agent`: A multi-step sequential processing workflow.
-  - `loop_agent`: An iterative agent for refinement tasks.
-- **Tooling Examples**:
-  - **Pure Functions**: Local Python functions wrapped as ADK tools.
-  - **MCP (Model Context Protocol)**: Integration with MCP servers (e.g., local filesystem).
-  - **Google Search Grounding**: Real-time search using Google Search.
-- **Developer Suite**: Local `adk web` playground, `pytest` for unit testing, and `ruff` for linting.
+- **Marketing Multi-Agent Orchestration**:
+  - `marketing_orchestrator`: The root agent that coordinates specialized sub-agents to deliver full marketing packages.
+  - `analysis_agent`: Fetches and analyzes customer data from BigQuery via MCP tools to identify trends.
+  - `segmentation_agent`: Categorizes customers into high-value, churn-risk, or custom marketing segments.
+  - `content_agent`: Generates personalized marketing copy (Email, SMS, Ads) tailored to specific segments.
+  - `reviewer_agent`: Validates all generated content against brand guidelines and legal compliance.
+- **Advanced Tooling**:
+  - **MCP (Model Context Protocol)**: Live connection to BigQuery for real-time data analysis.
+  - **Google Search Grounding**: Real-time market research and trend validation.
+  - **Custom SSE Proxy**: A FastAPI-based custom UI with real-time response streaming and typing indicators.
+- **Enterprise Developer Suite**: Integrated `adk web` playground, automated behavioral evals, and full CI/CD pipelines.
 
 ## Developer Flow
 
