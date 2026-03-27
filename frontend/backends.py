@@ -2,7 +2,6 @@ import os
 import json
 import httpx
 import vertexai
-from vertexai.preview import reasoning_engines
 from typing import AsyncGenerator, Dict, Any, List
 
 class BaseBackend:
@@ -143,7 +142,7 @@ class RemoteBackend(BaseBackend):
 
             # Handle 498 "Session not found"
             if isinstance(first_chunk, dict) and first_chunk.get("code") in [404, 498] and "Session not found" in first_chunk.get("message", ""):
-                print(f"Session not found, auto-creating session")
+                print("Session not found, auto-creating session")
                 try:
                     new_session_data = await engine.async_create_session(
                         user_id=kwargs["user_id"]
@@ -155,7 +154,11 @@ class RemoteBackend(BaseBackend):
                 except Exception as e:
                     print(f"Auto-create session warning (ignored): {e}")
                 
-                # Retry
+                # Notify UI of the new session ID so it stays in sync
+                if kwargs.get("session_id"):
+                    yield f"data: {json.dumps({'session_id': kwargs['session_id']})}\n\n"
+
+                # Retry with the new session
                 generator = engine.async_stream_query(**kwargs)
                 try:
                     first_chunk = await generator.__anext__()

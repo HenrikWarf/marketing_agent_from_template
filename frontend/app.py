@@ -1,5 +1,4 @@
 import os
-import httpx
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -81,10 +80,10 @@ async def proxy_chat(request: Request, env: str = Query("local")):
     except Exception as e:
         print(f"Chat error for {env}: {e}")
         
-        async def error_generator():
-            yield f"data: {{\"error\": \"{str(e)}\"}}\n\n"
+        async def error_generator(error_msg: str):
+            yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
             
-        return StreamingResponse(error_generator(), media_type="text/event-stream")
+        return StreamingResponse(error_generator(str(e)), media_type="text/event-stream")
 
 @app.get("/")
 async def read_index():

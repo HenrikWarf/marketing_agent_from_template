@@ -360,6 +360,10 @@
                     opt.textContent = agent.name;
                     agentSelector.appendChild(opt);
                 });
+                
+                // Automatically create a valid session on load!
+                triggerNewSession().catch(console.error);
+
             } catch (error) {
                 console.error('Error loading agents:', error);
                 agentSelector.innerHTML = '<option>Error loading agents</option>';
@@ -460,6 +464,13 @@
                                 if (data.error) {
                                     throw new Error(data.error);
                                 }
+                                
+                                // Auto-sync session ID if server updated it mid-stream
+                                if (data.session_id) {
+                                    sessionId = data.session_id;
+                                    console.log("Session ID dynamically synced from server:", sessionId);
+                                }
+                                
                                 if (data.content && data.content.parts) {
                                     const newTextChunks = data.content.parts.map(p => p.text || '').join('');
                                     if (newTextChunks) {
