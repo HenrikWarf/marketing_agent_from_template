@@ -29,6 +29,7 @@ source = { editable = "." }
 dependencies = [
     { name = "fastapi" },
     { name = "google-adk", extra = ["eval"] },
+    { name = "httpx" },
     { name = "locust" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
@@ -41,6 +42,7 @@ dependencies = [
 requires-dist = [
     { name = "fastapi" },
     { name = "google-adk", extras = ["eval"] },
+    { name = "httpx" },
     { name = "locust" },
     { name = "pytest" },
     { name = "pytest-asyncio" },

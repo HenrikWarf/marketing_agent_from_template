@@ -35,6 +35,10 @@ A base template for building ADK agents with multiple architectural patterns (Si
 - **Architecture**: A FastAPI server (`frontend/app.py`) serves a static HTML/JS chat interface (`frontend/static/index.html`).
 - **Communication**: Uses SSE (Server-Sent Events) to stream agent responses from the backend.
 - **Dual Terminal Requirement**: Locally, both the agent backend (`make playground`) and the UI (`make ui`) must be running.
+- **Session Management**: 
+  - **Always Backend-Driven**: Remote Vertex AI instances (`VertexAISessionService`) reject user-provided session IDs. The backend must explicitly generate the `session_id` using `engine.async_create_session` and return it to the frontend.
+  - **Use Async SDK**: Always use `await engine.async_create_session`. The synchronous `create_session` has a hardcoded 10-second timeout, causing `FAILED_PRECONDITION` exceptions when remote agents take longer to cold-start.
+  - **Return Types**: `async_create_session` returns a full Python dictionary (`{"id": "...", ...}`), not a string. Extract `.get("id")` before passing it back into stream requests.
 
 ### Configuration
 - **Auth**: Support both `GOOGLE_API_KEY` (AI Studio) and Vertex AI (ADC). Use `.env` for local configuration.
