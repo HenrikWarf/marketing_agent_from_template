@@ -213,6 +213,36 @@
             word-break: break-word;
         }
 
+        /* Markdown Styles */
+        .markdown-body {
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .markdown-body p:first-child { margin-top: 0; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        .markdown-body code {
+            background-color: rgba(175, 184, 193, 0.2);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Consolas, monospace;
+            font-size: 85%;
+        }
+        .markdown-body pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 100%;
+        }
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5em;
+        }
+
         /* Typing Indicator */
         .typing-indicator {
             display: flex;
@@ -237,6 +267,8 @@
             50% { transform: scale(1.2); opacity: 1; }
         }
     </style>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <header>
@@ -347,12 +379,15 @@
                 msgDiv.appendChild(label);
                 
                 const content = document.createElement('div');
-                content.className = 'pre-wrap';
-                content.innerText = text;
+                content.className = 'markdown-body';
+                content.innerHTML = marked.parse(text || '');
                 msgDiv.appendChild(content);
             } else {
                 msgDiv.className += ' user';
-                msgDiv.innerText = text;
+                const content = document.createElement('div');
+                content.className = 'pre-wrap';
+                content.innerText = text;
+                msgDiv.appendChild(content);
             }
             
             chatContainer.appendChild(msgDiv);
@@ -384,7 +419,7 @@
 
             appendMessage('user', text);
             const agentMsgDiv = appendMessage('agent', '');
-            const contentDiv = agentMsgDiv.querySelector('.pre-wrap');
+            const contentDiv = agentMsgDiv.querySelector('.markdown-body');
             const indicator = showTypingIndicator(agentMsgDiv);
             
             let fullResponse = '';
@@ -433,7 +468,7 @@
                                             started = true;
                                         }
                                         fullResponse += newTextChunks;
-                                        contentDiv.innerText = fullResponse;
+                                        contentDiv.innerHTML = marked.parse(fullResponse);
                                         document.querySelector('main').scrollTop = document.querySelector('main').scrollHeight;
                                     }
                                 }
