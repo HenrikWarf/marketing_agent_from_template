@@ -147,8 +147,37 @@ resource "github_repository_environment" "production_environment" {
   environment = "production"
   depends_on  = [github_repository.repo, data.github_repository.existing_repo]
 
+  reviewers {
+    users = [data.github_user.current.id]
+  }
+
   deployment_branch_policy {
     protected_branches     = false
     custom_branch_policies = true
   }
+}
+
+data "github_user" "current" {
+  username = var.repository_owner
+}
+
+# Enforce the development flow: No direct pushes to main, requires PR and passing checks
+resource "github_branch_protection" "main_protection" {
+  repository_id = var.create_repository ? github_repository.repo[0].node_id : data.github_repository.existing_repo[0].node_id
+  pattern          = "main"
+  enforce_admins   = true # Even admins must follow the PR flow
+
+  required_pull_request_reviews {
+    dismiss_stale_reviews = true
+    require_code_owner_reviews = false
+    required_approving_review_count = 0 # Set to 1 if you want to require a human approval
+  }
+
+  required_status_checks {
+    strict   = true
+    contexts = ["test"] # This must match the job name in pr_checks.yaml
+  }
+
+  allows_force_pushes = false
+  allows_deletions    = false
 }
