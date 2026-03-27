@@ -73,10 +73,12 @@ resource "google_vertex_ai_reasoning_engine" "app" {
   }
 
   # This lifecycle block prevents Terraform from overwriting the source code when it's
-  # updated by Agent Engine deployments outside of Terraform (e.g., via CI/CD pipelines)
+  # updated by Agent Engine deployments outside of Terraform (e.g., via CI/CD pipelines).
+  # We also temporarily ignore the entire spec to prevent failed update loops during 
+  # infrastructure migrations.
   lifecycle {
     ignore_changes = [
-      spec[0].source_code_spec,
+      spec,
     ]
   }
 

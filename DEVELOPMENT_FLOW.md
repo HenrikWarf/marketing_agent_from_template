@@ -1,112 +1,93 @@
-# ADK Development & Deployment Lifecycle
+# ADK Development & Deployment Flow
 
-This guide walks you through the complete process of building, testing, and deploying agents using this template.
-
----
-
-## Phase 1: Local Development & Verification
-This phase is where you iterate on agent logic, prompts, and tools. **Goal: Ensure high behavioral quality before cloud deployment.**
-
-### 1. Environment Setup
-```bash
-# Install dependencies and create venv
-make setup
-
-# Configure environment
-cp .env.example .env
-# Update .env with your GOOGLE_API_KEY (AI Studio) or GOOGLE_CLOUD_PROJECT (Vertex AI)
-
-# Enable GCP APIs and authenticate (if using Vertex AI)
-make gcp-setup
-```
-
-### 2. Rapid Iteration (The Playground)
-Test all four agent architectures (`simple`, `subagents`, `sequential`, `loop`) in the official ADK interface.
-```bash
-make playground
-```
-*Use this to debug tool-calling logic and multi-turn conversations.*
-
-### 3. Frontend Integration (Custom UI)
-Test how the agent performs in a real-world chat interface using SSE streaming.
-```bash
-make ui
-# Access at http://localhost:3000
-```
-
-### 4. Automated Quality Gate (Pre-Flight)
-Before pushing any code, ensure all checks pass. These are the same checks run in CI.
-```bash
-make lint   # Code style (Ruff)
-make test   # Structural integrity (Pytest)
-make eval   # Behavioral quality & Grounding (ADK Evals)
-```
+This guide describes the enterprise-grade workflow for building, testing, and deploying AI agents using this template. The process is divided into a **Fast Inner Loop** (local), a **Cloud Sandbox** (dev), and a **Protected Pipeline** (CI/CD).
 
 ---
 
-## Phase 2: Remote Development (Dev Environment)
-Once local tests pass, deploy to a cloud environment to test on managed infrastructure.
+## 1. The Git Workflow (Feature Branching)
 
-### 1. Manual Deployment
+To maintain stability and ensure every change is verified, direct pushes to the `main` branch are **denied**. You must follow the Feature Branch workflow:
+
+1.  **Sync**: Start by ensuring your local `main` is up to date.
+    ```bash
+    git checkout main && git pull origin main
+    ```
+2.  **Branch**: Create a descriptive feature branch for your task.
+    ```bash
+    git checkout -b feature/your-agent-task
+    ```
+3.  **Iterate**: Follow the "Local Inner Loop" below.
+4.  **Push & PR**: Push your branch and open a Pull Request (PR) to `main` on GitHub.
+    ```bash
+    git push origin feature/your-agent-task
+    ```
+5.  **Merge**: Once CI checks pass and code is reviewed, merge the PR into `main` to trigger the deployment pipeline.
+
+---
+
+## 2. Phase 1: Local Inner Loop (VS Code)
+
+This phase is where you iterate on agent logic, prompts, and tools. Goal: Ensure high behavioral quality before code ever touches the cloud.
+
+### A. Setup
 ```bash
-# Deploy the agents/agent.py entrypoint to Vertex AI Agent Engine
+make setup        # Install dependencies
+make gcp-setup   # Enable APIs and authenticate
+```
+
+### B. Parallel Iteration Tools
+You should have multiple terminals open to test different aspects of the agent:
+*   **Terminal 1 (Playground)**: Run `make playground` to use the official ADK web interface. Ideal for debugging tool-calling and conversation state.
+*   **Terminal 2 (Chat UI)**: Run `make ui` to test the end-user experience. This validates **SSE (Server-Sent Events)** streaming and typing indicators at `http://localhost:3000`.
+*   **Terminal 3 (Quality)**: Run `make lint` (Ruff) and `make test` (Pytest) frequently to ensure structural integrity.
+*   **Terminal 4 (Scoring)**: Run `make eval` to execute automated behavioral scoring. This ensures your agent meets accuracy and grounding thresholds.
+
+---
+
+## 3. Phase 2: Remote Sandbox (Dev Environment)
+
+Once your local tests pass, verify your changes on real cloud infrastructure before merging.
+
+### A. Cloud Deployment
+```bash
 make deploy-dev
 ```
+*Note: This deploys the current state of your local code to a dedicated **Dev Instance** of Vertex AI Agent Engine. It does not affect other users or the production pipeline.*
 
-### 2. Remote Verification
-Use the provided notebook to query your deployed engine via the Python SDK.
+### B. Verification
+Use the provided notebook to query your deployed engine via the Python SDK to ensure all cloud-only tools (like BigQuery or Search) are functioning correctly.
 - **Path**: `notebooks/adk_app_testing.ipynb`
 
 ---
 
-## Phase 3: CI/CD Pipeline (Staging & Prod)
-Automated via **GitHub Actions**. This flow ensures that only verified code reaches production.
+## 4. Phase 3: CI/CD Pipeline (Automated)
 
-### 1. The `setup-cicd` Foundation (One-time Setup)
-The link between GitHub and Google Cloud is established via:
-- **Workload Identity Federation (WIF)**: Secure, keyless authentication between GitHub Actions and GCP.
-- **Service Accounts**: 
-    - `cicd_runner_sa`: Executes the pipeline and manages infrastructure.
-    - `app_sa`: The identity used by the agent at runtime (scoped to each environment).
-- **Terraform State**: Managed in a GCS bucket (`{cicd_project}-terraform-state`) to ensure consistent infra tracking.
+The pipeline is managed via **GitHub Actions** and **Terraform**, ensuring the environment is strictly controlled.
 
-### 2. Infrastructure as Code (Terraform)
-Terraform files in `deployment/terraform/` manage the "shell" of your agent:
-- **`service.tf`**: Manages the `google_vertex_ai_reasoning_engine` (Agent Engine) instance settings (scaling, limits).
-- **`iam.tf`**: Defines least-privilege roles for the agent and runner.
-- **`storage.tf`**: Provisions GCS buckets for agent artifacts and logs.
+### Step 1: PR Checks (Continuous Integration)
+*   **Trigger**: Pushing code to any branch or opening a PR.
+*   **Action**: Automatically runs `make lint` and `make test`.
+*   **Safety**: You cannot merge into `main` until these checks are **Green**.
 
-### 3. CI/CD Logic
-- **Pull Request (CI)**:
-    - **Trigger**: Push a branch and open a PR to `main`.
-    - **Action**: Runs `make lint` and `make test`.
-    - **Goal**: Prevent breaking the codebase.
-- **Merge to Main (Staging CD)**:
-    - **Trigger**: Merge PR into the `main` branch.
-    - **Action**: 
-        - **Auth**: Connects via WIF tokens.
-        - **Infra**: Applies Terraform changes for Staging.
-        - **Deploy**: Packages source code as a tarball and pushes to Agent Engine.
-        - **Test**: Runs **Load Tests** (Locust) to verify performance.
-- **Production Promotion (Prod CD)**:
-    - **Trigger**: Successful Staging deployment.
-    - **Action**: Pauses for **Manual Approval** in the GitHub Actions tab.
-    - **Goal**: Final human sign-off before the agent is live.
+### Step 2: Staging Deployment (Continuous Deployment)
+*   **Trigger**: Merging code into the `main` branch.
+*   **Action**: 
+    1. **Terraform**: Synchronizes GCP infrastructure.
+    2. **Deploy**: Deploys the agent to the **Staging** instance.
+    3. **Load Test**: Runs a headless **Locust** load test to ensure the agent remains responsive under concurrent traffic. Results are saved to GCS.
 
----
-
-## Phase 4: Connecting the UI to Remote
-To use your custom Chat UI with a deployed agent:
-
-1. **Endpoint Configuration**: Update the `baseUrl` in `frontend/static/index.html` to point to your Cloud Run or Agent Engine URL.
-2. **Authentication**: If using Vertex AI or IAP, ensure the request includes the required `Authorization: Bearer` token.
-3. **Deployment Mechanism**: Agent Engine uses **source-based deployment** (no Docker). The `deploy.py` script exports requirements and bundles the `agents/` directory for the Vertex AI Reasoning Engine service.
+### Step 3: Production Gate (Manual Approval)
+*   **Trigger**: Success of the Staging step.
+*   **Status**: The workflow **pauses**.
+*   **Action**: A lead engineer reviews the Staging results and the Load Test metrics in GCS.
+*   **Approval**: Clicking "Review and Approve" in the GitHub Actions tab promotes the code to the **Production** Agent Engine.
 
 ---
 
 ## Summary Checklist
-- [ ] **Local**: `make eval` score > 0.8.
-- [ ] **Dev**: `make deploy-dev` successful.
+- [ ] **Sync**: Branch created from latest `main`.
+- [ ] **Local**: `make eval` score meets targets.
+- [ ] **Sandbox**: `make deploy-dev` verified in cloud.
 - [ ] **CI**: GitHub PR checks are green.
-- [ ] **Staging**: Merged to main, load tests passed.
-- [ ] **Prod**: Manual approval clicked, agent live.
+- [ ] **Staging**: Load tests passed and reviewed.
+- [ ] **Prod**: Manual approval clicked, agent is live.

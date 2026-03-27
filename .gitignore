@@ -2,6 +2,20 @@
 __pycache__/
 *.log
 .env
+.env*
+!.env.example
+
+# ADK Artifacts
+.adk/
+eval_history/
+artifacts/
+session.db
+
+# Generated Deployment Files
+.requirements.txt
+
+# Media/Diagrams
+nanobanana-output/
 
 # Terraform
 .terraform/
