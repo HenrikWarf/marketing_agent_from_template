@@ -15,7 +15,7 @@
 import os
 import google.auth
 from google.adk.apps import App
-from agents.marketing_agent.agent import root_agent as marketing_root_agent
+from agents.marketing_agent.agent import root_agent as marketing_root_agent, retry_plugin
 
 # Initialize project ID from default credentials if not set
 try:
@@ -33,5 +33,6 @@ root_agent = marketing_root_agent
 app = App(
     root_agent=root_agent,
     name="agents", # Should match the directory name
+    plugins=[retry_plugin]
 )
 

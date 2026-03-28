@@ -1,5 +1,6 @@
 import os
 from google.adk import Agent
+from google.adk.plugins import ReflectAndRetryToolPlugin
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
 
 # BigQuery table configuration for marketing data
@@ -8,11 +9,18 @@ BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.cu
 # Fallback tool if BigQuery toolset is not available
 data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
 
+# Plugin for self-healing/retry on tool failures
+retry_plugin = ReflectAndRetryToolPlugin(max_retries=3)
+
 # 1. Analysis Agent - Fetches and analyzes BigQuery data
 analysis_agent = Agent(
     name="analysis_agent",
     model="gemini-2.5-flash",
     instruction=f"""You are a data analyst. Your goal is to analyze customer data from the BigQuery table: {BQ_CUSTOMER_TABLE} using the provided tools.
+    If you have access to BigQuery MCP tools (like execute_sql), use them to run actual SQL queries against the table.
+    
+    CRITICAL: If a tool call (like execute_sql) returns an error, analyze the error message, correct your query, and try again. 
+    Common issues include wrong column names or table references. Use the error feedback to improve your next attempt.
     Fetch relevant metrics, identify trends, and provide detailed data-driven insights.
     """,
     tools=data_tools,
@@ -26,7 +34,9 @@ segmentation_agent = Agent(
     instruction=f"""You are a segmentation expert. Based on the data analysis provided, 
     group customers into meaningful marketing segments (e.g., high-value, churn-risk, price-sensitive).
     Provide clear definitions and unique characteristics for each segment.
-    You can also use the BigQuery tools to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
+    If you have access to BigQuery MCP tools (like execute_sql), use them to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
+    
+    CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     """,
     tools=data_tools,
     description="Segments customers into marketing categories based on data."
