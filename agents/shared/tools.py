@@ -43,6 +43,7 @@ if not bq_mcp_toolset:
         auth_req = google.auth.transport.requests.Request()
         creds.refresh(auth_req)
         
+        print("Initializing direct BigQuery MCP toolset...")
         bq_mcp_toolset = McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url="https://bigquery.googleapis.com/mcp",
@@ -50,7 +51,10 @@ if not bq_mcp_toolset:
                     "Authorization": f"Bearer {creds.token}",
                     "Content-Type": "application/json",
                     "X-Goog-User-Project": PROJECT_ID
-                }
+                },
+                # Increase timeouts for complex BigQuery operations
+                timeout=30.0,
+                sse_read_timeout=300.0
             )
         )
         print("Successfully initialized direct BigQuery MCP toolset.")

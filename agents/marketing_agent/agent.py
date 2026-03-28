@@ -1,7 +1,7 @@
 import os
 import json
 from google.adk import Agent
-from google.adk.plugins import ReflectAndRetryToolPlugin
+from agents.shared.plugins import BigQueryReflectRetryPlugin
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
 
 # BigQuery table configuration for marketing data
@@ -19,8 +19,8 @@ except Exception as e:
 # Fallback tool if BigQuery toolset is not available
 data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
 
-# Plugin for self-healing/retry on tool failures
-retry_plugin = ReflectAndRetryToolPlugin(max_retries=3)
+# Plugin for self-healing/retry on tool failures - specialized for BigQuery
+retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)
 
 # 1. Analysis Agent - Fetches and analyzes BigQuery data
 analysis_agent = Agent(
