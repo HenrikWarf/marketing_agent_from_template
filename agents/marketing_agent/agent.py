@@ -1,14 +1,17 @@
 from google.adk import Agent
-from agents.shared.tools import mcp_query_tool
+from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
+
+# Fallback tool if BigQuery toolset is not available
+data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
 
 # 1. Analysis Agent - Fetches and analyzes BigQuery data
 analysis_agent = Agent(
     name="analysis_agent",
     model="gemini-2.5-flash",
-    instruction="""You are a data analyst. Your goal is to analyze customer data from BigQuery via the mcp_query_tool.
+    instruction="""You are a data analyst. Your goal is to analyze customer data from BigQuery using the provided tools.
     Fetch relevant metrics, identify trends, and provide detailed data-driven insights.
     """,
-    tools=[mcp_query_tool],
+    tools=data_tools,
     description="Analyzes BigQuery data to find trends and insights."
 )
 
@@ -19,9 +22,9 @@ segmentation_agent = Agent(
     instruction="""You are a segmentation expert. Based on the data analysis provided, 
     group customers into meaningful marketing segments (e.g., high-value, churn-risk, price-sensitive).
     Provide clear definitions and unique characteristics for each segment.
-    You can also use the mcp_query_tool to fetch additional data from BigQuery if needed for more precise segmentation.
+    You can also use the BigQuery tools to fetch additional data if needed for more precise segmentation.
     """,
-    tools=[mcp_query_tool],
+    tools=data_tools,
     description="Segments customers into marketing categories based on data."
 )
 
