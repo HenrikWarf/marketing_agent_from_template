@@ -1,5 +1,9 @@
+import os
 from google.adk import Agent
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
+
+# BigQuery table configuration for marketing data
+BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
 
 # Fallback tool if BigQuery toolset is not available
 data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
@@ -8,7 +12,7 @@ data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
 analysis_agent = Agent(
     name="analysis_agent",
     model="gemini-2.5-flash",
-    instruction="""You are a data analyst. Your goal is to analyze customer data from BigQuery using the provided tools.
+    instruction=f"""You are a data analyst. Your goal is to analyze customer data from the BigQuery table: {BQ_CUSTOMER_TABLE} using the provided tools.
     Fetch relevant metrics, identify trends, and provide detailed data-driven insights.
     """,
     tools=data_tools,
@@ -19,10 +23,10 @@ analysis_agent = Agent(
 segmentation_agent = Agent(
     name="segmentation_agent",
     model="gemini-2.5-flash",
-    instruction="""You are a segmentation expert. Based on the data analysis provided, 
+    instruction=f"""You are a segmentation expert. Based on the data analysis provided, 
     group customers into meaningful marketing segments (e.g., high-value, churn-risk, price-sensitive).
     Provide clear definitions and unique characteristics for each segment.
-    You can also use the BigQuery tools to fetch additional data if needed for more precise segmentation.
+    You can also use the BigQuery tools to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
     """,
     tools=data_tools,
     description="Segments customers into marketing categories based on data."
