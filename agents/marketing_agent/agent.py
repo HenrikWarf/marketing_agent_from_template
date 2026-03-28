@@ -1,10 +1,20 @@
 import os
+import json
 from google.adk import Agent
 from google.adk.plugins import ReflectAndRetryToolPlugin
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
 
 # BigQuery table configuration for marketing data
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
+
+# Load table schema context for better query generation
+schema_path = os.path.join(os.path.dirname(__file__), "customer_schema.json")
+try:
+    with open(schema_path, "r") as f:
+        CUSTOMER_SCHEMA = f.read()
+except Exception as e:
+    print(f"Warning: Could not load customer_schema.json: {e}")
+    CUSTOMER_SCHEMA = "Schema details unavailable."
 
 # Fallback tool if BigQuery toolset is not available
 data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
@@ -18,6 +28,9 @@ analysis_agent = Agent(
     model="gemini-2.5-flash",
     instruction=f"""You are a data analyst. Your goal is to analyze customer data from the BigQuery table: {BQ_CUSTOMER_TABLE} using the provided tools.
     If you have access to BigQuery MCP tools (like execute_sql), use them to run actual SQL queries against the table.
+    
+    Here is the table schema for your reference:
+    {CUSTOMER_SCHEMA}
     
     CRITICAL: If a tool call (like execute_sql) returns an error, analyze the error message, correct your query, and try again. 
     Common issues include wrong column names or table references. Use the error feedback to improve your next attempt.
@@ -35,6 +48,9 @@ segmentation_agent = Agent(
     group customers into meaningful marketing segments (e.g., high-value, churn-risk, price-sensitive).
     Provide clear definitions and unique characteristics for each segment.
     If you have access to BigQuery MCP tools (like execute_sql), use them to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
+    
+    Here is the table schema for your reference:
+    {CUSTOMER_SCHEMA}
     
     CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     """,
