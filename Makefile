@@ -33,12 +33,12 @@ eval:
 	$(UV) run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
 
 playground:
-	$(UV) run adk web agents/marketing_agent/
+	$(UV) run adk web agents/
 
 ui:
 	@echo "Starting ADK API Server and Custom UI..."
 	# Run api_server in the background so it's available for the UI
-	$(UV) run adk api_server agents/marketing_agent/ --auto_create_session & \
+	$(UV) run adk api_server agents/ --auto_create_session & \
 	.venv/bin/python frontend/app.py
 
 

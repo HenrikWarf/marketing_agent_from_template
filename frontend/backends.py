@@ -24,10 +24,11 @@ class LocalBackend(BaseBackend):
                 response = await client.get(f"{self.adk_api_url}/list-apps")
                 if response.status_code == 200:
                     data = response.json()
-                    return [
-                        {"id": name, "name": name.replace("_", " ").title()}
-                        for name in data
-                    ]
+                    if data:
+                        return [
+                            {"id": name, "name": name.replace("_", " ").title()}
+                            for name in data
+                        ]
         except Exception as e:
             print(f"LocalBackend list_agents error: {e}")
         
@@ -35,13 +36,24 @@ class LocalBackend(BaseBackend):
         agents_dir = os.path.join(os.getcwd(), "agents")
         agents = []
         if os.path.exists(agents_dir):
+            # Check for agents/marketing_agent directly if it's the primary one
+            if os.path.exists(os.path.join(agents_dir, "marketing_agent", "agent.py")):
+                agents.append({"id": "marketing_agent", "name": "Marketing Manager"})
+            
+            # Search for others
             for item in os.listdir(agents_dir):
                 item_path = os.path.join(agents_dir, item)
                 if os.path.isdir(item_path) and \
                    os.path.exists(os.path.join(item_path, "agent.py")) and \
                    not item.startswith((".", "__")) and \
-                   item not in ["shared", "app_utils"]:
+                   item not in ["shared", "app_utils", "marketing_agent"]:
                     agents.append({"id": item, "name": item.replace("_", " ").title()})
+        
+        # If still empty, the server might be running against a single agent dir
+        if not agents:
+            # Default to the primary agent if nothing else is found
+            return [{"id": "marketing_agent", "name": "Marketing Manager"}]
+            
         return sorted(agents, key=lambda x: x["name"])
 
     async def create_session(self, body: Dict[str, Any]) -> str:
