@@ -1,5 +1,4 @@
 import os
-import json
 from google.adk import Agent
 from agents.shared.plugins import BigQueryReflectRetryPlugin
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
