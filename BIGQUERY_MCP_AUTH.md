@@ -11,7 +11,8 @@ The current implementation uses a **System Identity** model. The agent authentic
     - **Locally**: Uses `gcloud auth application-default login`.
     - **On Google Cloud**: Uses the **Vertex AI / Cloud Run Service Account** (`{PROJECT_NUMBER}-compute@developer.gserviceaccount.com`).
 2.  **Dynamic Token Refresh**: We use a `header_provider` within the `McpToolset`. This ensures that for **every new MCP session**, a fresh OAuth 2.0 access token is generated.
-3.  **Permissions**: The service account requires the following roles on the target project (`marketing-agent-01-491314`):
+3.  **Direct HTTP Connection**: The agent connects directly to `https://bigquery.googleapis.com/mcp` using `StreamableHTTPConnectionParams`.
+4.  **Permissions**: The service account requires the following roles on the target project (`marketing-agent-01-491314`):
     - `roles/bigquery.dataViewer`: To read the tables.
     - `roles/bigquery.jobUser`: To run queries.
 

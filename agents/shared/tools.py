@@ -4,7 +4,6 @@ from typing import Annotated
 import google.auth
 import google.auth.transport.requests
 from google.adk.tools import FunctionTool, google_search, McpToolset
-from google.adk.integrations.api_registry import ApiRegistry
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams
 from google.adk.agents.readonly_context import ReadonlyContext
 
@@ -24,8 +23,6 @@ PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 if not PROJECT_ID:
     PROJECT_ID = "marketing-agent-01-491314"
 
-MCP_SERVER_NAME = f"projects/{PROJECT_ID}/locations/global/mcpServers/google-bigquery.googleapis.com-mcp"
-
 def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
     """Provides refreshed auth headers for each MCP session."""
     try:
@@ -42,32 +39,22 @@ def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
         print(f"Error in header_provider: {e}")
         return {}
 
-# Try to get toolset from API Registry first
+# Direct HTTP connection to the BigQuery MCP endpoint
 bq_mcp_toolset = None
-api_registry = ApiRegistry(PROJECT_ID)
 try:
-    bq_mcp_toolset = api_registry.get_toolset(
-        mcp_server_name=MCP_SERVER_NAME
+    print("Initializing direct BigQuery MCP toolset with dynamic header provider...")
+    bq_mcp_toolset = McpToolset(
+        connection_params=StreamableHTTPConnectionParams(
+            url="https://bigquery.googleapis.com/mcp",
+            # Note: Static headers here are merged with dynamic ones from provider
+            timeout=30.0,
+            sse_read_timeout=300.0
+        ),
+        header_provider=get_auth_headers
     )
+    print("Successfully initialized direct BigQuery MCP toolset.")
 except Exception as e:
-    print(f"Warning: Could not retrieve BigQuery MCP toolset from registry: {e}")
-
-# If registry fails, try direct HTTP connection to the BigQuery MCP endpoint
-if not bq_mcp_toolset:
-    try:
-        print("Initializing direct BigQuery MCP toolset with dynamic header provider...")
-        bq_mcp_toolset = McpToolset(
-            connection_params=StreamableHTTPConnectionParams(
-                url="https://bigquery.googleapis.com/mcp",
-                # Note: Static headers here are merged with dynamic ones from provider
-                timeout=30.0,
-                sse_read_timeout=300.0
-            ),
-            header_provider=get_auth_headers
-        )
-        print("Successfully initialized direct BigQuery MCP toolset.")
-    except Exception as e:
-        print(f"Warning: Could not initialize direct BigQuery MCP toolset: {e}")
+    print(f"Warning: Could not initialize direct BigQuery MCP toolset: {e}")
 
 # 3. MCP (Model Context Protocol) Placeholder (Conceptual)
 async def mcp_query(
