@@ -24,19 +24,30 @@ if not PROJECT_ID:
     PROJECT_ID = "marketing-agent-01-491314"
 
 def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
-    """Provides refreshed auth headers for each MCP session."""
+    """Provides refreshed auth headers for each MCP session with detailed logging."""
     try:
         # Get credentials and token
-        creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        creds, project = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        print(f"Refreshing token for project: {project or PROJECT_ID}")
+        
         auth_req = google.auth.transport.requests.Request()
         creds.refresh(auth_req)
-        return {
+        
+        headers = {
             "Authorization": f"Bearer {creds.token}",
             "Content-Type": "application/json",
-            "X-Goog-User-Project": PROJECT_ID
         }
+        
+        # Only add project header if we are sure about it
+        target_project = project or PROJECT_ID
+        if target_project:
+            headers["X-Goog-User-Project"] = target_project
+            
+        return headers
     except Exception as e:
-        print(f"Error in header_provider: {e}")
+        import traceback
+        print(f"CRITICAL: Error in header_provider: {e}")
+        traceback.print_exc()
         return {}
 
 # Direct HTTP connection to the BigQuery MCP endpoint
@@ -46,9 +57,9 @@ try:
     bq_mcp_toolset = McpToolset(
         connection_params=StreamableHTTPConnectionParams(
             url="https://bigquery.googleapis.com/mcp",
-            # Note: Static headers here are merged with dynamic ones from provider
-            timeout=30.0,
-            sse_read_timeout=300.0
+            # Increased timeouts for remote environment stability
+            timeout=60.0,
+            sse_read_timeout=600.0
         ),
         header_provider=get_auth_headers
     )

@@ -62,7 +62,9 @@ analysis_agent = Agent(
     {CUSTOMER_SCHEMA}
     
     CRITICAL: If a tool call (like execute_sql) returns an error, analyze the error message, correct your query, and try again. 
-    Common issues include wrong column names or table references. Use the error feedback to improve your next attempt.
+    Common issues include wrong column names or table references. 
+    If you see an error about 'TaskGroup' or 'unhandled errors', this is a transient connection issue. Wait a moment and retry your query exactly as it was.
+    Use the error feedback to improve your next attempt.
     
     EXIT CONDITION: Once you have identified key metrics and trends, format your findings according to the AnalysisResult schema and terminate. 
     DO NOT suggest next steps or try to transfer to other agents.
