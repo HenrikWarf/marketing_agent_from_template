@@ -49,9 +49,8 @@ class AgentEngineApp(AdkApp):
     def register_operations(self) -> dict[str, list[str]]:
         """Registers the operations of the Agent."""
         operations = super().register_operations()
-        # Filter out async operations that can confuse some SDK client versions
-        # during dynamic method registration.
-        supported_modes = ["", "stream"]
+        # Ensure async_stream is included to support async_stream_query
+        supported_modes = ["", "stream", "async_stream"]
         filtered_operations = {
             k: v for k, v in operations.items() if k in supported_modes
         }

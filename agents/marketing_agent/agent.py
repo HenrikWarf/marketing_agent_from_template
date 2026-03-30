@@ -1,7 +1,37 @@
 import os
+from typing import List, Dict, Any
+from pydantic import BaseModel, Field
 from google.adk import Agent
 from agents.shared.plugins import BigQueryReflectRetryPlugin
 from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
+
+# --- Structured Output Schemas (The Blackboard) ---
+
+class AnalysisResult(BaseModel):
+    """Result of the data analysis phase."""
+    summary: str = Field(description="Executive summary of findings")
+    key_metrics: Dict[str, Any] = Field(description="Important metrics discovered")
+    trends: List[str] = Field(description="Identified trends in the data")
+    raw_query_used: str = Field(description="The SQL query that produced these results")
+
+class SegmentationResult(BaseModel):
+    """Result of the customer segmentation phase."""
+    segments: List[Dict[str, Any]] = Field(description="List of segments with name, description, and count")
+    logic_reasoning: str = Field(description="Reasoning behind these segment definitions")
+
+class ContentResult(BaseModel):
+    """Result of the marketing content creation phase."""
+    content_drafts: List[Dict[str, Any]] = Field(description="Drafts for different channels (email, SMS, etc.)")
+    target_segment: str = Field(description="The specific segment this content is for")
+    call_to_action: str = Field(description="The primary action we want users to take")
+
+class ReviewResult(BaseModel):
+    """Result of the brand and compliance review."""
+    status: str = Field(description="Must be exactly 'VERIFIED' or 'REJECTED'")
+    feedback: str = Field(description="Detailed feedback or suggestions for improvement")
+    guideline_check: bool = Field(description="True if all guidelines are met")
+
+# --- Configuration ---
 
 # BigQuery table configuration for marketing data
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
@@ -33,9 +63,15 @@ analysis_agent = Agent(
     
     CRITICAL: If a tool call (like execute_sql) returns an error, analyze the error message, correct your query, and try again. 
     Common issues include wrong column names or table references. Use the error feedback to improve your next attempt.
-    Fetch relevant metrics, identify trends, and provide detailed data-driven insights.
+    
+    EXIT CONDITION: Once you have identified key metrics and trends, format your findings according to the AnalysisResult schema and terminate. 
+    DO NOT suggest next steps or try to transfer to other agents.
     """,
     tools=data_tools,
+    output_schema=AnalysisResult,
+    output_key="analysis_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
     description="Analyzes BigQuery data to find trends and insights."
 )
 
@@ -52,8 +88,15 @@ segmentation_agent = Agent(
     {CUSTOMER_SCHEMA}
     
     CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
+    
+    EXIT CONDITION: Once segments are defined, format your output according to the SegmentationResult schema and terminate.
+    DO NOT suggest next steps or try to transfer to other agents.
     """,
     tools=data_tools,
+    output_schema=SegmentationResult,
+    output_key="segments_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
     description="Segments customers into marketing categories based on data."
 )
 
@@ -63,9 +106,16 @@ content_agent = Agent(
     name="content_agent",
     model="gemini-2.5-flash",
     instruction="""You are a marketing copywriter. Create personalized text content (emails, SMS, or social ads)
-    tailored specifically to the customer segments and insights provided by the other agents.
+    tailored specifically to the customer segments and insights provided in the session state.
     The tone should be engaging and focused on marketing communication.
+    
+    EXIT CONDITION: Once the content drafts are complete, format your output according to the ContentResult schema and terminate.
+    DO NOT suggest next steps or try to transfer to other agents.
     """,
+    output_schema=ContentResult,
+    output_key="content_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
     description="Creates personalized marketing text for specific segments."
 )
 
@@ -75,26 +125,41 @@ reviewer_agent = Agent(
     model="gemini-2.5-flash",
     instruction="""You are a brand reviewer. Your job is to ensure all marketing content follows 
     the company's guidelines. Check for brand consistency, tone, and legal compliance.
-    If the content is correct, start your response with 'VERIFIED:'.
     Reject and suggest fixes for any content that doesn't meet the standards.
+    
+    EXIT CONDITION: Once you have completed the review, format your output according to the ReviewResult schema and terminate.
+    - If correct, status must be 'VERIFIED'.
+    - If there are issues, status must be 'REJECTED' and feedback must be detailed.
+    DO NOT suggest next steps or try to transfer to other agents.
     """,
+    output_schema=ReviewResult,
+    output_key="review_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
     description="Reviews marketing content against company brand guidelines."
 )
 
-# 5. Orchestrator Agent - The entry point for the user
+# 5. Marketing Manager - The entry point for the user
 root_agent = Agent(
-    name="marketing_orchestrator",
+    name="marketing_manager",
     model="gemini-2.5-flash",
-    instruction="""You are the marketing system orchestrator. 
-    Your primary role is to delegate tasks to your specialized team. 
-    DO NOT perform specialized tasks yourself.
+    instruction="""You are the Marketing Manager. Your primary role is to coordinate your specialized team 
+    to deliver high-quality marketing outcomes. You manage the global state and decide which expert to call next.
     
-    - For any data queries or trend analysis, ALWAYS transfer to analysis_agent.
-    - For defining customer segments or groups, ALWAYS transfer to segmentation_agent.
-    - For drafting emails, SMS, or any marketing copy, ALWAYS transfer to content_agent.
-    - For reviewing or verifying content against guidelines, ALWAYS transfer to reviewer_agent.
+    MANAGEMENT RULES:
+    1. DO NOT perform specialized tasks (analysis, segmentation, drafting, review) yourself.
+    2. ALWAYS check the session state (Blackboard) to see what work has already been completed.
+    3. Hub-and-Spoke: Sub-agents will return their results to you. Analyze their output before deciding the next step.
     
-    You may answer general questions about the system, but specialized marketing work must be delegated.
+    WORKFLOW:
+    - If data needs to be explored or trends identified -> Transfer to analysis_agent.
+    - If analysis is done (`analysis_data` is present) but segments are missing -> Transfer to segmentation_agent.
+    - If segments are defined (`segments_data` is present) but content is missing -> Transfer to content_agent.
+    - If content is drafted (`content_data` is present) -> Transfer to reviewer_agent.
+    - If reviewer rejects content (`review_data.status` is 'REJECTED') -> Send feedback back to content_agent.
+    - If reviewer verifies content (`review_data.status` is 'VERIFIED') -> Present the final verified content to the user and conclude the task.
+    
+    You are the only agent that speaks directly to the end-user.
     """,
     sub_agents=[analysis_agent, segmentation_agent, content_agent, reviewer_agent]
 )
