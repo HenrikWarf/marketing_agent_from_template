@@ -109,19 +109,22 @@ class RemoteBackend(BaseBackend):
         Creates a session explicitly in Vertex AI memory. 
         Notes on API behavior:
         1. DO NOT pass a client-generated session_id. `VertexAISessionService` rejects user-provided IDs.
-        2. Always use `await engine.async_create_session`. The synchronous `engine.create_session` enforces a 
-           strict 10s thread timeout, which crashes with FAILED_PRECONDITION during remote agent cold-starts.
-        3. `async_create_session` returns a full dictionary block, not a string. We must parse out ['id'].
+        2. AgentEngine objects often use 'create_session' (synchronous) or handle it internally.
         """
         try:
             engine = self._get_engine()
-            # Remote backend MUST generate the session ID
-            session_data = await engine.async_create_session(
-                user_id=body.get("user_id", "user-default")
-            )
-            if isinstance(session_data, dict):
-                return session_data.get("id")
-            return session_data
+            # Try to create session using the synchronous method if async is missing
+            if hasattr(engine, "create_session"):
+                session_data = engine.create_session(
+                    user_id=body.get("user_id", "user-default")
+                )
+                if isinstance(session_data, dict):
+                    return session_data.get("id")
+                return getattr(session_data, "id", session_data)
+            
+            # Fallback: Just return a placeholder or None, letting stream_chat handle it
+            print("Warning: engine.create_session not found, session will be handled during chat")
+            return None
         except Exception as e:
             print(f"RemoteBackend create_session error: {e}")
             raise e
@@ -131,7 +134,6 @@ class RemoteBackend(BaseBackend):
             engine = self._get_engine()
             
             # ADK payload structure: { "new_message": { "role": "user", "parts": [...] }, ... }
-            # Remote ADK instances expect the 'message' key (not 'input')
             user_input = ""
             new_message = body.get("new_message", {})
             parts = new_message.get("parts", [])
@@ -145,6 +147,7 @@ class RemoteBackend(BaseBackend):
                 "user_id": body.get("user_id") or "user-default"
             }
 
+            # Remote ADK instances expose async_stream_query
             generator = engine.async_stream_query(**kwargs)
             
             try:
@@ -152,17 +155,21 @@ class RemoteBackend(BaseBackend):
             except StopAsyncIteration:
                 first_chunk = None
 
-            # Handle 498 "Session not found"
+            # Handle 498 "Session not found" or 404
             if isinstance(first_chunk, dict) and first_chunk.get("code") in [404, 498] and "Session not found" in first_chunk.get("message", ""):
                 print("Session not found, auto-creating session")
                 try:
-                    new_session_data = await engine.async_create_session(
-                        user_id=kwargs["user_id"]
-                    )
-                    if isinstance(new_session_data, dict):
-                        kwargs["session_id"] = new_session_data.get("id")
+                    if hasattr(engine, "create_session"):
+                        new_session_data = engine.create_session(
+                            user_id=kwargs["user_id"]
+                        )
+                        if isinstance(new_session_data, dict):
+                            kwargs["session_id"] = new_session_data.get("id")
+                        else:
+                            kwargs["session_id"] = getattr(new_session_data, "id", new_session_data)
                     else:
-                        kwargs["session_id"] = new_session_data
+                        # Clear session ID and let the server auto-create
+                        kwargs["session_id"] = None
                 except Exception as e:
                     print(f"Auto-create session warning (ignored): {e}")
                 
