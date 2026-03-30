@@ -1,8 +1,6 @@
 import os
 import asyncio
 from typing import Annotated
-import google.auth
-import google.auth.transport.requests
 from google.adk.tools import FunctionTool, google_search, McpToolset
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams
 from google.adk.agents.readonly_context import ReadonlyContext
@@ -17,36 +15,57 @@ def calculate_area(
 
 calculate_area_tool = FunctionTool(calculate_area)
 
-# BigQuery MCP Toolset
-PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
-# Default to the provided project ID if not set in env
-if not PROJECT_ID:
-    PROJECT_ID = "marketing-agent-01-491314"
+# BigQuery table configuration for marketing data
+BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
 
-def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
-    """Provides refreshed auth headers for each MCP session."""
+# Load table schema context
+def get_customer_table_schema() -> str:
+    """Returns the schema of the customer table for SQL query generation."""
+    schema_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "marketing_agent", "customer_schema.json")
     try:
-        # Get credentials and token
-        creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        with open(schema_path, "r") as f:
+            return f.read()
+    except Exception as e:
+        return f"Error loading schema: {e}"
+
+get_customer_table_schema_tool = FunctionTool(get_customer_table_schema)
+def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
+    """Provides refreshed auth headers for each MCP session with detailed logging."""
+    try:
+        import google.auth
+        import google.auth.compute_engine
+        import google.auth.transport.requests
+
         auth_req = google.auth.transport.requests.Request()
-        creds.refresh(auth_req)
+        
+        # In a remote environment (Vertex AI), we should use Compute Engine credentials
+        # to avoid any interactive login prompts that cause 404 redirects.
+        try:
+            creds = google.auth.compute_engine.Credentials(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+            creds.refresh(auth_req)
+            print("Successfully refreshed Compute Engine credentials.")
+        except Exception:
+            # Fallback to default for local development
+            creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+            creds.refresh(auth_req)
+            print("Successfully refreshed default credentials.")
+
         return {
             "Authorization": f"Bearer {creds.token}",
             "Content-Type": "application/json",
-            "X-Goog-User-Project": PROJECT_ID
         }
     except Exception as e:
-        print(f"Error in header_provider: {e}")
+        print(f"CRITICAL: Error in header_provider: {e}")
         return {}
 
 # Direct HTTP connection to the BigQuery MCP endpoint
 bq_mcp_toolset = None
 try:
-    print("Initializing direct BigQuery MCP toolset with dynamic header provider...")
+    print("Initializing direct BigQuery MCP toolset...")
     bq_mcp_toolset = McpToolset(
         connection_params=StreamableHTTPConnectionParams(
             url="https://bigquery.googleapis.com/mcp",
-            # Note: Static headers here are merged with dynamic ones from provider
+            # Adjusted timeouts for balance between speed and stability
             timeout=30.0,
             sse_read_timeout=300.0
         ),

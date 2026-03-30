@@ -41,6 +41,7 @@ ui:
 	$(UV) run adk api_server agents/ --auto_create_session & \
 	.venv/bin/python frontend/app.py
 
+
 deploy-dev:
 	@echo "Deploying to DEV environment..."
 	# Set environment variables for DEV
