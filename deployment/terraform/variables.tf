@@ -62,6 +62,7 @@ variable "app_sa_roles" {
     "roles/serviceusage.serviceUsageConsumer",
     "roles/bigquery.dataViewer",
     "roles/bigquery.jobUser",
+    "roles/mcp.toolUser",
   ]
 }
 
