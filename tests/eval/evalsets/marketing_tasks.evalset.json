@@ -19,14 +19,18 @@
       "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
     },
     {
-      "eval_id": "segmentation_task",
+      "eval_id": "data_analysis_task",
       "conversation": [
         {
           "invocation_id": "inv_1",
-          "user_content": { "parts": [{ "text": "We have high electronics sales. Can you define 3 segments for these buyers?" }] },
+          "user_content": { "parts": [{ "text": "Run a query to find the top product categories by revenue in the last 6 months." }] },
+          "final_response": {
+            "role": "model",
+            "parts": [{ "text": "summary" }, { "text": "raw_query_used" }]
+          },
           "intermediate_data": {
             "tool_uses": [
-              { "name": "transfer_to_agent", "args": { "agent_name": "segmentation_agent" } }
+              { "name": "transfer_to_agent", "args": { "agent_name": "analysis_agent" } }
             ]
           }
         }
@@ -41,7 +45,7 @@
           "user_content": { "parts": [{ "text": "Draft a 20% discount email for our 'Frequent Shoppers' segment." }] },
           "final_response": {
             "role": "model",
-            "parts": [{ "text": "I've drafted the 20% discount email for our Frequent Shoppers segment." }]
+            "parts": [{ "text": "content_drafts" }, { "text": "target_segment" }]
           },
           "intermediate_data": {
             "tool_uses": [
@@ -60,7 +64,7 @@
           "user_content": { "parts": [{ "text": "Verify if this text meets our brand guidelines: 'Flash Sale: Everything must go!'" }] },
           "final_response": {
             "role": "model",
-            "parts": [{ "text": "The content has been reviewed. It was rejected because the phrase 'Everything must go!' is too broad and potentially misleading. Suggested fixes include adding a time limit or being more specific about which items are on sale." }]
+            "parts": [{ "text": "status" }, { "text": "feedback" }]
           },
           "intermediate_data": {
             "tool_uses": [
@@ -71,5 +75,6 @@
       ],
       "session_input": { "app_name": "marketing_agent", "user_id": "eval_user" }
     }
+
   ]
 }
