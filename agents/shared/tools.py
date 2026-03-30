@@ -6,6 +6,7 @@ import google.auth.transport.requests
 from google.adk.tools import FunctionTool, google_search, McpToolset
 from google.adk.integrations.api_registry import ApiRegistry
 from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams
+from google.adk.agents.readonly_context import ReadonlyContext
 
 # 1. Pure Function Tool
 def calculate_area(
@@ -17,13 +18,29 @@ def calculate_area(
 
 calculate_area_tool = FunctionTool(calculate_area)
 
-# 2. BigQuery MCP Toolset
+# BigQuery MCP Toolset
 PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
 # Default to the provided project ID if not set in env
 if not PROJECT_ID:
     PROJECT_ID = "marketing-agent-01-491314"
 
 MCP_SERVER_NAME = f"projects/{PROJECT_ID}/locations/global/mcpServers/google-bigquery.googleapis.com-mcp"
+
+def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
+    """Provides refreshed auth headers for each MCP session."""
+    try:
+        # Get credentials and token
+        creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        auth_req = google.auth.transport.requests.Request()
+        creds.refresh(auth_req)
+        return {
+            "Authorization": f"Bearer {creds.token}",
+            "Content-Type": "application/json",
+            "X-Goog-User-Project": PROJECT_ID
+        }
+    except Exception as e:
+        print(f"Error in header_provider: {e}")
+        return {}
 
 # Try to get toolset from API Registry first
 bq_mcp_toolset = None
@@ -38,24 +55,15 @@ except Exception as e:
 # If registry fails, try direct HTTP connection to the BigQuery MCP endpoint
 if not bq_mcp_toolset:
     try:
-        # Get credentials and token
-        creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
-        auth_req = google.auth.transport.requests.Request()
-        creds.refresh(auth_req)
-        
-        print("Initializing direct BigQuery MCP toolset...")
+        print("Initializing direct BigQuery MCP toolset with dynamic header provider...")
         bq_mcp_toolset = McpToolset(
             connection_params=StreamableHTTPConnectionParams(
                 url="https://bigquery.googleapis.com/mcp",
-                headers={
-                    "Authorization": f"Bearer {creds.token}",
-                    "Content-Type": "application/json",
-                    "X-Goog-User-Project": PROJECT_ID
-                },
-                # Increase timeouts for complex BigQuery operations
+                # Note: Static headers here are merged with dynamic ones from provider
                 timeout=30.0,
                 sse_read_timeout=300.0
-            )
+            ),
+            header_provider=get_auth_headers
         )
         print("Successfully initialized direct BigQuery MCP toolset.")
     except Exception as e:
