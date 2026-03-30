@@ -4,7 +4,7 @@ A comprehensive AI-driven marketing system built with the Google ADK (Agent Deve
 
 ## Features
 - **Marketing Multi-Agent Orchestration**:
-  - `marketing_orchestrator`: The root agent that coordinates specialized sub-agents to deliver full marketing packages.
+  - `marketing_manager`: The root hub that coordinates specialized sub-agents via a state-aware Hub-and-Spoke model.
   - `analysis_agent`: Fetches and analyzes customer data from BigQuery via MCP tools to identify trends.
   - `segmentation_agent`: Categorizes customers into high-value, churn-risk, or custom marketing segments.
   - `content_agent`: Generates personalized marketing copy (Email, SMS, Ads) tailored to specific segments.
