@@ -1,6 +1,11 @@
+import os
 import asyncio
 from typing import Annotated
-from google.adk.tools import FunctionTool, google_search
+import google.auth
+import google.auth.transport.requests
+from google.adk.tools import FunctionTool, google_search, McpToolset
+from google.adk.tools.mcp_tool import StreamableHTTPConnectionParams
+from google.adk.agents.readonly_context import ReadonlyContext
 
 # 1. Pure Function Tool
 def calculate_area(
@@ -12,7 +17,46 @@ def calculate_area(
 
 calculate_area_tool = FunctionTool(calculate_area)
 
-# 2. MCP (Model Context Protocol) Placeholder (Conceptual)
+# BigQuery MCP Toolset
+PROJECT_ID = os.getenv("GOOGLE_CLOUD_PROJECT")
+# Default to the provided project ID if not set in env
+if not PROJECT_ID:
+    PROJECT_ID = "marketing-agent-01-491314"
+
+def get_auth_headers(ctx: ReadonlyContext) -> dict[str, str]:
+    """Provides refreshed auth headers for each MCP session."""
+    try:
+        # Get credentials and token
+        creds, _ = google.auth.default(scopes=['https://www.googleapis.com/auth/cloud-platform'])
+        auth_req = google.auth.transport.requests.Request()
+        creds.refresh(auth_req)
+        return {
+            "Authorization": f"Bearer {creds.token}",
+            "Content-Type": "application/json",
+            "X-Goog-User-Project": PROJECT_ID
+        }
+    except Exception as e:
+        print(f"Error in header_provider: {e}")
+        return {}
+
+# Direct HTTP connection to the BigQuery MCP endpoint
+bq_mcp_toolset = None
+try:
+    print("Initializing direct BigQuery MCP toolset with dynamic header provider...")
+    bq_mcp_toolset = McpToolset(
+        connection_params=StreamableHTTPConnectionParams(
+            url="https://bigquery.googleapis.com/mcp",
+            # Note: Static headers here are merged with dynamic ones from provider
+            timeout=30.0,
+            sse_read_timeout=300.0
+        ),
+        header_provider=get_auth_headers
+    )
+    print("Successfully initialized direct BigQuery MCP toolset.")
+except Exception as e:
+    print(f"Warning: Could not initialize direct BigQuery MCP toolset: {e}")
+
+# 3. MCP (Model Context Protocol) Placeholder (Conceptual)
 async def mcp_query(
     query: Annotated[str, "The query for the MCP server"]
 ) -> str:
@@ -32,28 +76,11 @@ async def mcp_query(
 
 mcp_query_tool = FunctionTool(mcp_query)
 
-# 3. Real MCP Toolset Example (Commented out by default to avoid environment issues)
-# This connects to a local MCP server (e.g., the filesystem server)
-# To use this, ensure Node.js is installed and you have access to the registry.
-"""
-from google.adk.tools import McpToolset
-from google.adk.tools.mcp_tool import StdioConnectionParams
-from mcp import StdioServerParameters
-
-mcp_toolset = McpToolset(
-    connection_params=StdioConnectionParams(
-        server_params=StdioServerParameters(
-            command="npx",
-            args=["-y", "@modelcontextprotocol/server-filesystem", "/tmp"],
-        )
-    )
-)
-"""
-
 # 4. Google Search Grounding (Built-in)
 # We re-export or use the built-in google_search tool.
 search_tool = google_search
 
-# For the base template, we use the conceptual tool instead of the real toolset
-# to ensure it runs out-of-the-box without registry auth issues.
+# For the base template, we include the real BigQuery MCP toolset if available
 all_tools = [calculate_area_tool, mcp_query_tool, search_tool]
+if bq_mcp_toolset:
+    all_tools.append(bq_mcp_toolset)

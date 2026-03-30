@@ -1,14 +1,41 @@
+import os
 from google.adk import Agent
-from agents.shared.tools import mcp_query_tool
+from agents.shared.plugins import BigQueryReflectRetryPlugin
+from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
+
+# BigQuery table configuration for marketing data
+BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
+
+# Load table schema context for better query generation
+schema_path = os.path.join(os.path.dirname(__file__), "customer_schema.json")
+try:
+    with open(schema_path, "r") as f:
+        CUSTOMER_SCHEMA = f.read()
+except Exception as e:
+    print(f"Warning: Could not load customer_schema.json: {e}")
+    CUSTOMER_SCHEMA = "Schema details unavailable."
+
+# Fallback tool if BigQuery toolset is not available
+data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
+
+# Plugin for self-healing/retry on tool failures - specialized for BigQuery
+retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)
 
 # 1. Analysis Agent - Fetches and analyzes BigQuery data
 analysis_agent = Agent(
     name="analysis_agent",
     model="gemini-2.5-flash",
-    instruction="""You are a data analyst. Your goal is to analyze customer data from BigQuery via the mcp_query_tool.
+    instruction=f"""You are a data analyst. Your goal is to analyze customer data from the BigQuery table: {BQ_CUSTOMER_TABLE} using the provided tools.
+    If you have access to BigQuery MCP tools (like execute_sql), use them to run actual SQL queries against the table.
+    
+    Here is the table schema for your reference:
+    {CUSTOMER_SCHEMA}
+    
+    CRITICAL: If a tool call (like execute_sql) returns an error, analyze the error message, correct your query, and try again. 
+    Common issues include wrong column names or table references. Use the error feedback to improve your next attempt.
     Fetch relevant metrics, identify trends, and provide detailed data-driven insights.
     """,
-    tools=[mcp_query_tool],
+    tools=data_tools,
     description="Analyzes BigQuery data to find trends and insights."
 )
 
@@ -16,12 +43,17 @@ analysis_agent = Agent(
 segmentation_agent = Agent(
     name="segmentation_agent",
     model="gemini-2.5-flash",
-    instruction="""You are a segmentation expert. Based on the data analysis provided, 
+    instruction=f"""You are a segmentation expert. Based on the data analysis provided, 
     group customers into meaningful marketing segments (e.g., high-value, churn-risk, price-sensitive).
     Provide clear definitions and unique characteristics for each segment.
-    You can also use the mcp_query_tool to fetch additional data from BigQuery if needed for more precise segmentation.
+    If you have access to BigQuery MCP tools (like execute_sql), use them to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
+    
+    Here is the table schema for your reference:
+    {CUSTOMER_SCHEMA}
+    
+    CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     """,
-    tools=[mcp_query_tool],
+    tools=data_tools,
     description="Segments customers into marketing categories based on data."
 )
 

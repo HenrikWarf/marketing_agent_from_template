@@ -32,9 +32,17 @@ A base template for building ADK agents with multiple architectural patterns (Si
 - **Load Testing**: Use Locust (`tests/load_test/`) to verify stability before production promotion.
 
 ### Frontend (Custom UI)
-- **Architecture**: A FastAPI server (`frontend/app.py`) serves a static HTML/JS chat interface (`frontend/static/index.html`).
+- **Architecture**: A FastAPI server (`frontend/app.py`) serves a static HTML/JS chat interface (`frontend/static/index.html`). Backend routing logic lives in `frontend/backends.py`.
 - **Communication**: Uses SSE (Server-Sent Events) to stream agent responses from the backend.
 - **Dual Terminal Requirement**: Locally, both the agent backend (`make playground`) and the UI (`make ui`) must be running.
+- **Markdown Rendering**: Agent responses are parsed and rendered as HTML using `marked.js` (loaded from CDN). The `.markdown-body` CSS class handles styling for code blocks, lists, and inline code.
+- **Multi-Environment Backend Routing**: `frontend/backends.py` contains `LocalBackend` (proxies to the local ADK API server) and `RemoteBackend` (connects directly to Vertex AI Agent Engine via the `vertexai` SDK). `get_backend_manager(env, config)` selects the correct backend based on the environment.
+- **Session Management**: 
+  - **Always Backend-Driven**: Remote Vertex AI instances (`VertexAISessionService`) reject user-provided session IDs. The backend must explicitly generate the `session_id` using `engine.async_create_session` and return it to the frontend.
+  - **Use Async SDK**: Always use `await engine.async_create_session`. The synchronous `create_session` has a hardcoded 10-second timeout, causing `FAILED_PRECONDITION` exceptions when remote agents take longer to cold-start.
+  - **Return Types**: `async_create_session` returns a full Python dictionary (`{"id": "...", ...}`), not a string. Extract `.get("id")` before passing it back into stream requests.
+  - **Session Sync**: The backend emits `data: {"session_id": "..."}` SSE events when it auto-creates a session mid-stream. The frontend parses these to keep its local `sessionId` variable in sync.
+  - **Initial Session**: The UI automatically triggers `triggerNewSession()` after loading agents to ensure a valid session exists before the user sends their first message.
 
 ### Configuration
 - **Auth**: Support both `GOOGLE_API_KEY` (AI Studio) and Vertex AI (ADC). Use `.env` for local configuration.

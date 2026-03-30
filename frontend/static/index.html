@@ -13,6 +13,10 @@
             --bg-color: #ffffff;
             --border-color: #dadce0;
             --chat-width: 800px;
+            --stg-color: #f29900;
+            --prod-color: #d93025;
+            --dev-color: #af5cf7;
+            --local-color: #1a73e8;
         }
 
         * { box-sizing: border-box; }
@@ -46,7 +50,13 @@
             gap: 10px;
         }
 
-        #agent-selector {
+        .controls {
+            display: flex;
+            gap: 12px;
+            align-items: center;
+        }
+
+        select {
             padding: 0.5rem 1rem;
             border-radius: 8px;
             border: 1px solid var(--border-color);
@@ -57,7 +67,16 @@
             background-color: #f8f9fa;
         }
 
-        #agent-selector:hover { background-color: #f1f3f4; }
+        select:hover { background-color: #f1f3f4; }
+
+        #env-selector {
+            font-weight: 500;
+            border-left: 4px solid var(--local-color);
+        }
+
+        #env-selector[data-env="dev"] { border-left-color: var(--dev-color); }
+        #env-selector[data-env="staging"] { border-left-color: var(--stg-color); }
+        #env-selector[data-env="prod"] { border-left-color: var(--prod-color); }
 
         main {
             flex: 1;
@@ -189,21 +208,39 @@
         button:hover { background-color: rgba(26, 115, 232, 0.1); }
         button:disabled { color: var(--border-color); cursor: not-allowed; }
 
-        .loading-dots::after {
-            content: '.';
-            animation: dots 1.5s steps(5, end) infinite;
-        }
-
-        @keyframes dots {
-            0%, 20% { content: '.'; }
-            40% { content: '..'; }
-            60% { content: '...'; }
-            80%, 100% { content: ''; }
-        }
-
         .pre-wrap {
             white-space: pre-wrap;
             word-break: break-word;
+        }
+
+        /* Markdown Styles */
+        .markdown-body {
+            line-height: 1.6;
+            word-break: break-word;
+        }
+        .markdown-body p:first-child { margin-top: 0; }
+        .markdown-body p:last-child { margin-bottom: 0; }
+        .markdown-body pre {
+            background-color: #f6f8fa;
+            border-radius: 8px;
+            padding: 12px;
+            overflow-x: auto;
+            border: 1px solid var(--border-color);
+        }
+        .markdown-body code {
+            background-color: rgba(175, 184, 193, 0.2);
+            padding: 0.2em 0.4em;
+            border-radius: 4px;
+            font-family: ui-monospace, SFMono-Regular, SF Mono, Consolas, monospace;
+            font-size: 85%;
+        }
+        .markdown-body pre code {
+            background-color: transparent;
+            padding: 0;
+            font-size: 100%;
+        }
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.5em;
         }
 
         /* Typing Indicator */
@@ -230,6 +267,8 @@
             50% { transform: scale(1.2); opacity: 1; }
         }
     </style>
+    <!-- Markdown Parser -->
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
 </head>
 <body>
     <header>
@@ -237,14 +276,22 @@
             <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M21 11.5a8.38 8.38 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.38 8.38 0 0 1-3.8-.9L3 21l1.9-5.7a8.38 8.38 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.38 8.38 0 0 1 3.8-.9h.5a8.48 8.48 0 0 1 8 8v.5z"></path></svg>
             ADK Assistant
         </div>
-        <select id="agent-selector">
-            <option value="">Loading agents...</option>
-        </select>
+        <div class="controls">
+            <select id="env-selector">
+                <option value="local">Local</option>
+            </select>
+            <select id="agent-selector">
+                <option value="">Loading agents...</option>
+            </select>
+            <button id="new-session-button" style="background:var(--google-blue);color:white;border-radius:4px;padding:6px 16px;font-size:0.9rem;font-weight:500;">
+                New Session
+            </button>
+        </div>
     </header>
 
     <main>
         <div id="chat-container">
-            <div class="message system">Dynamic agent discovery enabled. Select an agent to begin.</div>
+            <div class="message system">Select environment and agent to begin.</div>
         </div>
     </main>
 
@@ -262,18 +309,45 @@
         const userInput = document.getElementById('user-input');
         const sendButton = document.getElementById('send-button');
         const agentSelector = document.getElementById('agent-selector');
+        const envSelector = document.getElementById('env-selector');
+        const newSessionBtn = document.getElementById('new-session-button');
 
         let sessionId = 'session-' + Math.random().toString(36).substr(2, 9);
         const userId = 'user-local';
 
+        // Load environments
+        async function loadEnvironments() {
+            try {
+                const response = await fetch('/api/environments');
+                const data = await response.json();
+                
+                envSelector.innerHTML = '';
+                data.environments.forEach(env => {
+                    const opt = document.createElement('option');
+                    opt.value = env.id;
+                    opt.textContent = env.name;
+                    envSelector.appendChild(opt);
+                });
+                
+                // Trigger agent load for default env
+                loadAgents();
+            } catch (error) {
+                console.error('Error loading environments:', error);
+            }
+        }
+
         // Load agents dynamically
         async function loadAgents() {
+            const env = envSelector.value;
+            envSelector.setAttribute('data-env', env);
+            agentSelector.innerHTML = '<option value="">Loading agents...</option>';
+            
             try {
-                const response = await fetch('/api/agents');
+                const response = await fetch(`/api/agents?env=${env}`);
                 const data = await response.json();
                 
                 agentSelector.innerHTML = '';
-                if (data.agents.length === 0) {
+                if (!data.agents || data.agents.length === 0) {
                     const opt = document.createElement('option');
                     opt.textContent = "No agents found";
                     agentSelector.appendChild(opt);
@@ -286,6 +360,10 @@
                     opt.textContent = agent.name;
                     agentSelector.appendChild(opt);
                 });
+                
+                // Automatically create a valid session on load!
+                triggerNewSession().catch(console.error);
+
             } catch (error) {
                 console.error('Error loading agents:', error);
                 agentSelector.innerHTML = '<option>Error loading agents</option>';
@@ -299,16 +377,21 @@
             if (role === 'agent') {
                 const label = document.createElement('div');
                 label.className = 'agent-label';
-                label.innerText = agentSelector.options[agentSelector.selectedIndex]?.text || 'Agent';
+                const envName = envSelector.options[envSelector.selectedIndex]?.text || '';
+                const agentName = agentSelector.options[agentSelector.selectedIndex]?.text || 'Agent';
+                label.innerText = `${agentName} [${envName}]`;
                 msgDiv.appendChild(label);
                 
+                const content = document.createElement('div');
+                content.className = 'markdown-body';
+                content.innerHTML = marked.parse(text || '');
+                msgDiv.appendChild(content);
+            } else {
+                msgDiv.className += ' user';
                 const content = document.createElement('div');
                 content.className = 'pre-wrap';
                 content.innerText = text;
                 msgDiv.appendChild(content);
-            } else {
-                msgDiv.className += ' user';
-                msgDiv.innerText = text;
             }
             
             chatContainer.appendChild(msgDiv);
@@ -331,6 +414,7 @@
         async function sendMessage() {
             const text = userInput.value.trim();
             const agentName = agentSelector.value;
+            const env = envSelector.value;
             if (!text || !agentName) return;
 
             userInput.value = '';
@@ -339,13 +423,13 @@
 
             appendMessage('user', text);
             const agentMsgDiv = appendMessage('agent', '');
-            const contentDiv = agentMsgDiv.querySelector('.pre-wrap');
+            const contentDiv = agentMsgDiv.querySelector('.markdown-body');
             const indicator = showTypingIndicator(agentMsgDiv);
             
             let fullResponse = '';
 
             try {
-                const response = await fetch('/api/chat', {
+                const response = await fetch(`/api/chat?env=${env}`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({
@@ -373,27 +457,42 @@
                     for (const line of lines) {
                         if (line.startsWith('data: ')) {
                             try {
-                                const data = JSON.parse(line.slice(6));
+                                const rawData = line.slice(6);
+                                if (rawData === '[DONE]') continue;
+                                
+                                const data = JSON.parse(rawData);
+                                if (data.error) {
+                                    throw new Error(data.error);
+                                }
+                                
+                                // Auto-sync session ID if server updated it mid-stream
+                                if (data.session_id) {
+                                    sessionId = data.session_id;
+                                    console.log("Session ID dynamically synced from server:", sessionId);
+                                }
+                                
                                 if (data.content && data.content.parts) {
-                                    const newText = data.content.parts.map(p => p.text || '').join('');
-                                    if (newText) {
+                                    const newTextChunks = data.content.parts.map(p => p.text || '').join('');
+                                    if (newTextChunks) {
                                         if (!started) {
                                             indicator.remove();
                                             started = true;
                                         }
-                                        fullResponse = newText;
-                                        contentDiv.innerText = fullResponse;
+                                        fullResponse += newTextChunks;
+                                        contentDiv.innerHTML = marked.parse(fullResponse);
                                         document.querySelector('main').scrollTop = document.querySelector('main').scrollHeight;
                                     }
                                 }
-                            } catch (e) {}
+                            } catch (e) {
+                                console.warn('JSON parse error', e, line);
+                            }
                         }
                     }
                 }
             } catch (error) {
                 console.error('Error:', error);
-                indicator.remove();
-                contentDiv.innerText = 'Error: Could not connect to agent backend.';
+                if (indicator) indicator.remove();
+                contentDiv.innerText = `Error: ${error.message}`;
                 contentDiv.style.color = '#d93025';
             } finally {
                 userInput.disabled = false;
@@ -407,8 +506,59 @@
             if (e.key === 'Enter') sendMessage();
         });
 
+        async function createSession() {
+            const env = envSelector.value;
+            const agentName = agentSelector.value;
+            if (!agentName) return;
+            try {
+                const response = await fetch(`/api/sessions?env=${env}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        app_name: agentName,
+                        user_id: userId
+                    })
+                });
+                const data = await response.json();
+                if (data.status === 'success' && data.session_id) {
+                    sessionId = data.session_id;
+                    console.log("Joined new session:", sessionId);
+                } else {
+                    console.error("Backend failed to create valid session", data);
+                }
+            } catch (error) {
+                console.error("Error creating session", error);
+            }
+        }
+
+        async function triggerNewSession() {
+            userInput.disabled = true;
+            sendButton.disabled = true;
+            chatContainer.innerHTML = '<div class="message system">Creating new session...</div>';
+            
+            await createSession();
+            
+            chatContainer.innerHTML = '<div class="message system">New session started.</div>';
+            userInput.disabled = false;
+            sendButton.disabled = false;
+        }
+
+        newSessionBtn.addEventListener('click', () => {
+             triggerNewSession().catch(console.error);
+        });
+
+        agentSelector.addEventListener('change', () => {
+            if (agentSelector.value) {
+                triggerNewSession().catch(console.error);
+            }
+        });
+
+        envSelector.addEventListener('change', () => {
+            loadAgents();
+        });
+
         // Initialize
-        loadAgents();
+        loadEnvironments();
     </script>
 </body>
 </html>

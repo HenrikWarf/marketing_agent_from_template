@@ -49,8 +49,16 @@ class AgentEngineApp(AdkApp):
     def register_operations(self) -> dict[str, list[str]]:
         """Registers the operations of the Agent."""
         operations = super().register_operations()
-        operations[""] = operations.get("", []) + ["register_feedback"]
-        return operations
+        # Filter out async operations that can confuse some SDK client versions
+        # during dynamic method registration.
+        supported_modes = ["", "stream"]
+        filtered_operations = {
+            k: v for k, v in operations.items() if k in supported_modes
+        }
+        filtered_operations[""] = filtered_operations.get("", []) + [
+            "register_feedback"
+        ]
+        return filtered_operations
 
 
 gemini_location = os.environ.get("GOOGLE_CLOUD_LOCATION")

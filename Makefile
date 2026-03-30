@@ -1,3 +1,10 @@
+# Force uv to use public PyPI and ignore corporate wrappers/configs
+UV_BIN := $(shell which uv 2>/dev/null || echo "/Users/henrikw/.local/bin/uv")
+# If 'uv' is a bash function, 'which' might return it or fail. 
+# We want the real binary.
+REAL_UV := /Users/henrikw/.local/bin/uv
+UV := UV_NO_CONFIG=1 UV_DEFAULT_INDEX=https://pypi.org/simple $(REAL_UV)
+
 .PHONY: setup gcp-setup lint test playground clean setup-hooks
 
 setup-hooks:
@@ -5,8 +12,8 @@ setup-hooks:
 	git config core.hooksPath .githooks
 
 setup:
-	uv venv
-	uv pip install .
+	$(UV) venv
+	$(UV) pip install .
 	mkdir -p tests agents
 
 gcp-setup:
@@ -14,24 +21,24 @@ gcp-setup:
 	./setup_gcp.sh
 
 lint:
-	uv run ruff check .
+	$(UV) run ruff check .
 
 test:
-	uv run pytest
+	$(UV) run pytest
 
 AGENT ?= agents/marketing_agent/
 EVALSET ?= tests/eval/evalsets/marketing_campaign.evalset.json
 
 eval:
-	uv run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
+	$(UV) run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
 
 playground:
-	uv run adk web agents/
+	$(UV) run adk web agents/
 
 ui:
 	@echo "Starting ADK API Server and Custom UI..."
 	# Run api_server in the background so it's available for the UI
-	uv run adk api_server agents/ --auto_create_session & \
+	$(UV) run adk api_server agents/ --auto_create_session & \
 	.venv/bin/python frontend/app.py
 
 deploy-dev:
@@ -59,9 +66,9 @@ deploy:
 	$(eval BASE_NAME=$(shell grep AGENT_DISPLAY_NAME .env | cut -d '=' -f2))
 	$(eval FINAL_NAME=$(if $(ENV),$(BASE_NAME)-$(ENV),$(BASE_NAME)))
 	# Export dependencies to requirements file using uv export.
-	(uv export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > agents/app_utils/.requirements.txt 2>/dev/null || \
-	uv export --no-hashes --no-header --no-dev --no-emit-project > agents/app_utils/.requirements.txt) && \
-	uv run -m agents.app_utils.deploy \
+	($(UV) export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > agents/app_utils/.requirements.txt 2>/dev/null || \
+	$(UV) export --no-hashes --no-header --no-dev --no-emit-project > agents/app_utils/.requirements.txt) && \
+	$(UV) run -m agents.app_utils.deploy \
 		--project=$(GOOGLE_CLOUD_PROJECT) \
 		--display-name="$(FINAL_NAME)" \
 		--source-packages=./agents \
@@ -85,7 +92,7 @@ eval-all:
 
 install:
 	@command -v uv >/dev/null 2>&1 || { echo "uv is not installed. Installing uv..."; curl -LsSf https://astral.sh/uv/0.8.13/install.sh | sh; source $HOME/.local/bin/env; }
-	uv sync
+	$(UV) sync
 
 register-gemini-enterprise:
 	@uvx agent-starter-pack@0.39.6 register-gemini-enterprise

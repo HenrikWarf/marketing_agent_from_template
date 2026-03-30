@@ -1,0 +1,367 @@
+[
+  {
+    "name": "customer_id",
+    "type": "STRING",
+    "description": "Unique identifier for the customer."
+  },
+  {
+    "name": "email_address",
+    "type": "STRING",
+    "description": "Customer's primary email address."
+  },
+  {
+    "name": "first_name",
+    "type": "STRING",
+    "description": "Customer's first name."
+  },
+  {
+    "name": "location_city",
+    "type": "STRING",
+    "description": "City of residence."
+  },
+  {
+    "name": "location_country",
+    "type": "STRING",
+    "description": "Country of residence."
+  },
+  {
+    "name": "acquisition_source",
+    "type": "STRING",
+    "description": "Marketing channel where the customer was acquired."
+  },
+  {
+    "name": "creation_date",
+    "type": "DATETIME",
+    "description": "Date and time the customer record was created."
+  },
+  {
+    "name": "days_as_customer",
+    "type": "INTEGER",
+    "description": "Total number of days since the customer joined."
+  },
+  {
+    "name": "age",
+    "type": "INTEGER",
+    "description": "Age of the customer in years."
+  },
+  {
+    "name": "gender",
+    "type": "STRING",
+    "description": "Gender of the customer."
+  },
+  {
+    "name": "income_level",
+    "type": "STRING",
+    "description": "Categorical income level of the customer."
+  },
+  {
+    "name": "clv_score",
+    "type": "FLOAT",
+    "description": "Customer Lifetime Value score."
+  },
+  {
+    "name": "discount_sensitivity_score",
+    "type": "FLOAT",
+    "description": "Probability the customer will respond to discounts (0-1)."
+  },
+  {
+    "name": "free_shipping_sensitivity_score",
+    "type": "FLOAT",
+    "description": "Probability the customer will respond to free shipping (0-1)."
+  },
+  {
+    "name": "exclusivity_seeker_flag",
+    "type": "BOOLEAN",
+    "description": "True if the customer specifically seeks exclusive or premium products."
+  },
+  {
+    "name": "churn_probability_score",
+    "type": "FLOAT",
+    "description": "Calculated probability that the customer will churn (0-1)."
+  },
+  {
+    "name": "social_proof_affinity",
+    "type": "FLOAT",
+    "description": "Propensity to be influenced by social proof/reviews."
+  },
+  {
+    "name": "content_engagement_score",
+    "type": "FLOAT",
+    "description": "Overall engagement score with marketing content."
+  },
+  {
+    "name": "living_room_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Living Room category (0-1)."
+  },
+  {
+    "name": "bedroom_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Bedroom category (0-1)."
+  },
+  {
+    "name": "kitchen_dining_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Kitchen & Dining category (0-1)."
+  },
+  {
+    "name": "office_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Office category (0-1)."
+  },
+  {
+    "name": "outdoor_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Outdoor category (0-1)."
+  },
+  {
+    "name": "lighting_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Lighting category (0-1)."
+  },
+  {
+    "name": "storage_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Storage category (0-1)."
+  },
+  {
+    "name": "textiles_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Textiles category (0-1)."
+  },
+  {
+    "name": "bathroom_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Bathroom category (0-1)."
+  },
+  {
+    "name": "decoration_affinity",
+    "type": "FLOAT",
+    "description": "Preference score for Decoration category (0-1)."
+  },
+  {
+    "name": "favorite_category",
+    "type": "STRING",
+    "description": "The category the customer interacts with most."
+  },
+  {
+    "name": "secondary_category",
+    "type": "STRING",
+    "description": "The category the customer interacts with second most."
+  },
+  {
+    "name": "cross_category_shopper",
+    "type": "BOOLEAN",
+    "description": "True if the customer has purchased from multiple categories."
+  },
+  {
+    "name": "price_tier_preference",
+    "type": "STRING",
+    "description": "Preferred price level (e.g., Luxury, Mid-Range, Budget)."
+  },
+  {
+    "name": "total_purchases",
+    "type": "INTEGER",
+    "description": "Lifetime total number of orders."
+  },
+  {
+    "name": "total_revenue",
+    "type": "FLOAT",
+    "description": "Lifetime total revenue from the customer."
+  },
+  {
+    "name": "avg_order_value",
+    "type": "FLOAT",
+    "description": "Lifetime average order value."
+  },
+  {
+    "name": "first_purchase_date",
+    "type": "DATETIME",
+    "description": "Date of the customer's first purchase."
+  },
+  {
+    "name": "last_purchase_date",
+    "type": "DATETIME",
+    "description": "Date of the customer's most recent purchase."
+  },
+  {
+    "name": "days_since_last_purchase",
+    "type": "INTEGER",
+    "description": "Days elapsed since the last purchase."
+  },
+  {
+    "name": "purchase_frequency_per_month",
+    "type": "FLOAT",
+    "description": "Calculated average purchases per month."
+  },
+  {
+    "name": "purchases_90d",
+    "type": "INTEGER",
+    "description": "Total purchases in the last 90 days."
+  },
+  {
+    "name": "revenue_90d",
+    "type": "FLOAT",
+    "description": "Total revenue in the last 90 days."
+  },
+  {
+    "name": "avg_order_value_90d",
+    "type": "FLOAT",
+    "description": "Average order value in the last 90 days."
+  },
+  {
+    "name": "purchases_30d",
+    "type": "INTEGER",
+    "description": "Total purchases in the last 30 days."
+  },
+  {
+    "name": "revenue_30d",
+    "type": "FLOAT",
+    "description": "Total revenue in the last 30 days."
+  },
+  {
+    "name": "avg_order_value_30d",
+    "type": "FLOAT",
+    "description": "Average order value in the last 30 days."
+  },
+  {
+    "name": "most_purchased_category",
+    "type": "STRING",
+    "description": "The category with the highest purchase count."
+  },
+  {
+    "name": "most_recent_category",
+    "type": "STRING",
+    "description": "The category of the most recent purchase."
+  },
+  {
+    "name": "total_abandoned_carts",
+    "type": "INTEGER",
+    "description": "Lifetime total of abandoned carts."
+  },
+  {
+    "name": "total_abandoned_cart_value",
+    "type": "FLOAT",
+    "description": "Lifetime total value of items left in abandoned carts."
+  },
+  {
+    "name": "avg_abandoned_cart_value",
+    "type": "FLOAT",
+    "description": "Average value of abandoned carts."
+  },
+  {
+    "name": "last_cart_abandonment_date",
+    "type": "DATETIME",
+    "description": "Date of the most recent cart abandonment."
+  },
+  {
+    "name": "days_since_last_cart_abandonment",
+    "type": "INTEGER",
+    "description": "Days elapsed since the last cart abandonment."
+  },
+  {
+    "name": "abandoned_carts_30d",
+    "type": "INTEGER",
+    "description": "Total abandoned carts in the last 30 days."
+  },
+  {
+    "name": "abandoned_cart_value_30d",
+    "type": "FLOAT",
+    "description": "Total value of abandoned carts in the last 30 days."
+  },
+  {
+    "name": "abandoned_carts_90d",
+    "type": "INTEGER",
+    "description": "Total abandoned carts in the last 90 days."
+  },
+  {
+    "name": "total_events_lifetime",
+    "type": "INTEGER",
+    "description": "Lifetime total of all behavioral events."
+  },
+  {
+    "name": "last_event_date",
+    "type": "DATETIME",
+    "description": "Date of the most recent behavioral event."
+  },
+  {
+    "name": "days_since_last_event",
+    "type": "INTEGER",
+    "description": "Days elapsed since the last behavioral event."
+  },
+  {
+    "name": "events_90d",
+    "type": "INTEGER",
+    "description": "Total behavioral events in the last 90 days."
+  },
+  {
+    "name": "events_30d",
+    "type": "INTEGER",
+    "description": "Total behavioral events in the last 30 days."
+  },
+  {
+    "name": "most_viewed_category",
+    "type": "STRING",
+    "description": "The category the customer viewed most frequently."
+  },
+  {
+    "name": "engagement_rate_per_day",
+    "type": "FLOAT",
+    "description": "Calculated engagement events per day."
+  },
+  {
+    "name": "total_campaigns_received",
+    "type": "INTEGER",
+    "description": "Lifetime total number of marketing campaigns received."
+  },
+  {
+    "name": "total_campaigns_converted",
+    "type": "INTEGER",
+    "description": "Total number of campaigns that led to a purchase."
+  },
+  {
+    "name": "overall_conversion_rate",
+    "type": "FLOAT",
+    "description": "Lifetime campaign-to-purchase conversion rate."
+  },
+  {
+    "name": "campaigns_90d",
+    "type": "INTEGER",
+    "description": "Total campaigns received in the last 90 days."
+  },
+  {
+    "name": "conversions_90d",
+    "type": "INTEGER",
+    "description": "Total campaign conversions in the last 90 days."
+  },
+  {
+    "name": "conversion_rate_90d",
+    "type": "FLOAT",
+    "description": "Conversion rate in the last 90 days."
+  },
+  {
+    "name": "campaigns_30d",
+    "type": "INTEGER",
+    "description": "Total campaigns received in the last 30 days."
+  },
+  {
+    "name": "most_responsive_trigger_type",
+    "type": "STRING",
+    "description": "The type of campaign trigger the customer responds to best (e.g., Abandoned Cart, Welcome)."
+  },
+  {
+    "name": "last_campaign_date",
+    "type": "DATETIME",
+    "description": "Date of the most recent marketing campaign received."
+  },
+  {
+    "name": "days_since_last_campaign",
+    "type": "INTEGER",
+    "description": "Days elapsed since the last campaign."
+  },
+  {
+    "name": "last_updated_at",
+    "type": "TIMESTAMP",
+    "description": "Timestamp when this record was last updated."
+  }
+]
