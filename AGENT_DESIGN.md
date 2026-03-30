@@ -6,6 +6,36 @@ This document details the architectural design of the Marketing Agent system, bu
 
 Instead of a linear chain where agents call each other blindly ($A \to B \to C$), this system uses a centralized **Marketing Manager** that acts as the hub. Sub-agents (specialized contractors) perform specific tasks and always return control to the hub.
 
+### Visual Architecture (Hub-and-Spoke)
+
+```text
+          +-----------------------+
+          |         USER          |
+          +-----------+-----------+
+                      |
+                      v
+          +-----------------------+
+          |   MARKETING MANAGER   |<-------------------+
+          |        (The Hub)      |                    |
+          +-----------+-----------+                    |
+                      |                                |
+      +---------------+---------------+                | (Refinement
+      |               |               |                |    Loop)
+      v               v               v                |
++-----------+   +-----------+   +-----------+   +------+----+
+| Analysis  |   | Segment   |   |  Content  |   | Reviewer  |
+|  Agent    |   |   Agent   |   |   Agent   |   |   Agent   |
++-----------+   +-----------+   +-----------+   +-----------+
+      |               |               |                |
+      +---------------+---------------+----------------+
+                      |
+                      v
+          +-----------------------+
+          |  BLACKBOARD / STATE   |
+          | (analysis_data, etc.) |
+          +-----------------------+
+```
+
 ### The Hub-and-Spoke Model
 -   **The Hub (Marketing Manager)**: Manages global goals, monitors the shared state, and decides which expert to call next.
 -   **The Spokes (Sub-agents)**: Isolated experts (Analysis, Segmentation, Content, Review) that execute a specific command and return a structured result.
