@@ -472,13 +472,26 @@
                                 }
                                 
                                 if (data.content && data.content.parts) {
-                                    const newTextChunks = data.content.parts.map(p => p.text || '').join('');
-                                    if (newTextChunks) {
+                                    // ADK SSE behavior: some versions send the ENTIRE message so far in each chunk
+                                    // while others send incremental bits. 
+                                    // To fix duplication, we take the text from the message and only update if it's longer
+                                    // or handle incremental logic.
+                                    const currentFullText = data.content.parts.map(p => p.text || '').join('');
+                                    
+                                    if (currentFullText && currentFullText !== fullResponse) {
                                         if (!started) {
                                             indicator.remove();
                                             started = true;
                                         }
-                                        fullResponse += newTextChunks;
+                                        
+                                        // If the new text starts with the old text, it's a "full state" update
+                                        if (currentFullText.startsWith(fullResponse)) {
+                                            fullResponse = currentFullText;
+                                        } else {
+                                            // It's a genuine incremental chunk
+                                            fullResponse += currentFullText;
+                                        }
+                                        
                                         contentDiv.innerHTML = marked.parse(fullResponse);
                                         document.querySelector('main').scrollTop = document.querySelector('main').scrollHeight;
                                     }
