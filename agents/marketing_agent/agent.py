@@ -3,7 +3,7 @@ from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from google.adk import Agent
 from agents.shared.plugins import BigQueryReflectRetryPlugin
-from agents.shared.tools import bq_mcp_toolset, mcp_query_tool
+from agents.shared.tools import bq_mcp_toolset
 
 # --- Structured Output Schemas (The Blackboard) ---
 
@@ -31,7 +31,7 @@ class ReviewResult(BaseModel):
     feedback: str = Field(description="Detailed feedback or suggestions for improvement")
     guideline_check: bool = Field(description="True if all guidelines are met")
 
-# --- Configuration ---
+from agents.shared.tools import bq_mcp_toolset
 
 # BigQuery table configuration for marketing data
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
@@ -45,8 +45,9 @@ except Exception as e:
     print(f"Warning: Could not load customer_schema.json: {e}")
     CUSTOMER_SCHEMA = "Schema details unavailable."
 
-# Fallback tool if BigQuery toolset is not available
-data_tools = [bq_mcp_toolset] if bq_mcp_toolset else [mcp_query_tool]
+# The tools used by data agents (Analysis and Segmentation)
+data_tools = [bq_mcp_toolset] if bq_mcp_toolset else []
+
 
 # Plugin for self-healing/retry on tool failures - specialized for BigQuery
 retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)

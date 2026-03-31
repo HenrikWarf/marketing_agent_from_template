@@ -7,6 +7,9 @@ prod_project_id = "marketing-agent-01-491314"
 # Your Staging / Test Google Cloud project id
 staging_project_id = "marketing-agent-01-491314"
 
+# Your Development Google Cloud project id
+dev_project_id = "marketing-agent-01-491314"
+
 # Your Google Cloud project ID that will be used to host the Cloud Build pipelines.
 cicd_runner_project_id = "marketing-agent-01-491314"
 
