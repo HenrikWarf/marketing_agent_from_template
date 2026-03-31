@@ -124,32 +124,64 @@
         }
 
         .agent-label {
-            font-weight: 500;
-            font-size: 0.8rem;
-            color: var(--google-gray);
-            margin-bottom: 0.5rem;
+            display: none; /* Removed redundant label */
+        }
+
+        .status-container {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 16px;
+            padding: 4px 0;
+            background: transparent;
+        }
+
+        .agent-node {
             display: flex;
             align-items: center;
             gap: 8px;
+            padding: 5px 14px;
+            border-radius: 100px;
+            background: white;
+            border: 1px solid #e0e2e6; /* Default border */
+            font-size: 0.82rem;
+            font-weight: 500;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            color: #444746;
         }
 
-        .agent-label::before {
-            content: "";
-            width: 24px;
-            height: 24px;
-            background-color: var(--google-blue);
+        .agent-node.active {
+            box-shadow: 0 1px 2px 0 rgba(60, 64, 67, .3);
+            transform: translateY(-1px);
+            border-width: 1.5px;
+        }
+
+        /* Specific Border Colors per Agent */
+        .node-marketing_manager { border-color: #1a73e8; color: #1a73e8; }
+        .node-analysis_agent { border-color: #1e8e3e; color: #1e8e3e; }
+        .node-segmentation_agent { border-color: #f9ab00; color: #b06000; }
+        .node-content_agent { border-color: #d93025; color: #d93025; }
+        .node-reviewer_agent { border-color: #12b5cb; color: #007b83; }
+
+        /* Status Dot matching agent color */
+        .node-marketing_manager .status-dot { background: #1a73e8; }
+        .node-analysis_agent .status-dot { background: #1e8e3e; }
+        .node-segmentation_agent .status-dot { background: #f9ab00; }
+        .node-content_agent .status-dot { background: #d93025; }
+        .node-reviewer_agent .status-dot { background: #12b5cb; }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
             border-radius: 50%;
-            display: inline-block;
+            opacity: 0.5;
         }
 
-        .system {
-            align-self: center;
-            color: var(--google-gray);
-            font-size: 0.85rem;
-            background: #f8f9fa;
-            padding: 0.5rem 1rem;
-            border-radius: 20px;
-            margin: 1rem 0;
+        .active .status-dot {
+            opacity: 1;
+            animation: pulse-dot 1.5s infinite;
         }
 
         /* Fixed Centered Input Container */
@@ -381,6 +413,11 @@
                 const agentName = agentSelector.options[agentSelector.selectedIndex]?.text || 'Agent';
                 label.innerText = `${agentName} [${envName}]`;
                 msgDiv.appendChild(label);
+
+                // Container for background process insights
+                const statusContainer = document.createElement('div');
+                statusContainer.className = 'status-container';
+                msgDiv.appendChild(statusContainer);
                 
                 const content = document.createElement('div');
                 content.className = 'markdown-body';
@@ -424,9 +461,12 @@
             appendMessage('user', text);
             const agentMsgDiv = appendMessage('agent', '');
             const contentDiv = agentMsgDiv.querySelector('.markdown-body');
+            const statusContainer = agentMsgDiv.querySelector('.status-container');
             const indicator = showTypingIndicator(agentMsgDiv);
             
             let fullResponse = '';
+            let currentAgentId = null;
+            let lastAgentNode = null;
 
             try {
                 const response = await fetch(`/api/chat?env=${env}`, {
@@ -461,21 +501,71 @@
                                 if (rawData === '[DONE]') continue;
                                 
                                 const data = JSON.parse(rawData);
+
                                 if (data.error) {
                                     throw new Error(data.error);
                                 }
                                 
-                                // Auto-sync session ID if server updated it mid-stream
                                 if (data.session_id) {
                                     sessionId = data.session_id;
-                                    console.log("Session ID dynamically synced from server:", sessionId);
                                 }
                                 
+                                // Agent Flow Visualization
+                                const agentName = data.author || data.agent_name || data.agentName;
+                                if (agentName && agentName !== currentAgentId) {
+                                    currentAgentId = agentName;
+                                    const agentDisplay = agentName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+                                    
+                                    if (lastAgentNode) {
+                                        const arrow = document.createElement('div');
+                                        arrow.className = 'agent-arrow';
+                                        arrow.innerHTML = '→';
+                                        statusContainer.appendChild(arrow);
+                                        lastAgentNode.classList.remove('active');
+                                    }
+
+                                    const node = document.createElement('div');
+                                    node.className = `agent-node node-${agentName} active`;
+                                    node.innerHTML = `
+                                        <div class="status-dot"></div>
+                                        <div class="agent-name">${agentDisplay}</div>
+                                        <div class="tool-status"></div>
+                                    `;
+                                    statusContainer.appendChild(node);
+                                    lastAgentNode = node;
+                                    
+                                    const label = agentMsgDiv.querySelector('.agent-label');
+                                    if (label) {
+                                        const envName = envSelector.options[envSelector.selectedIndex]?.text || '';
+                                        label.innerText = `${agentDisplay} [${envName}]`;
+                                    }
+                                }
+
+                                const updateToolStatus = (text) => {
+                                    if (lastAgentNode) {
+                                        const statusEl = lastAgentNode.querySelector('.tool-status');
+                                        if (statusEl) statusEl.innerText = text;
+                                    }
+                                };
+
+                                if (data.actions && Array.isArray(data.actions)) {
+                                    data.actions.forEach(action => {
+                                        const tc = action.tool_call || action.toolCall;
+                                        if (tc) updateToolStatus(`${tc.name || tc.tool_name}...`);
+                                        
+                                        const tr = action.tool_response || action.toolResponse || action.tool_call_result || action.toolCallResult;
+                                        if (tr) updateToolStatus(`Finished ${tr.name || tr.tool_name}`);
+                                    });
+                                }
+
+                                const toolCall = data.tool_call || data.toolCall;
+                                if (toolCall) updateToolStatus(`${toolCall.name || toolCall.tool_name}...`);
+
+                                const toolResponse = data.tool_response || data.toolResponse || data.tool_call_result || data.toolCallResult;
+                                if (toolResponse) updateToolStatus(`Finished ${toolResponse.name || toolResponse.tool_name}`);
+                                
+                                // Content Handling
                                 if (data.content && data.content.parts) {
-                                    // ADK SSE behavior: some versions send the ENTIRE message so far in each chunk
-                                    // while others send incremental bits. 
-                                    // To fix duplication, we take the text from the message and only update if it's longer
-                                    // or handle incremental logic.
                                     const currentFullText = data.content.parts.map(p => p.text || '').join('');
                                     
                                     if (currentFullText && currentFullText !== fullResponse) {
@@ -484,11 +574,9 @@
                                             started = true;
                                         }
                                         
-                                        // If the new text starts with the old text, it's a "full state" update
                                         if (currentFullText.startsWith(fullResponse)) {
                                             fullResponse = currentFullText;
                                         } else {
-                                            // It's a genuine incremental chunk
                                             fullResponse += currentFullText;
                                         }
                                         

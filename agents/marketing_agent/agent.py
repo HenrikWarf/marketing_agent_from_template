@@ -46,7 +46,9 @@ except Exception as e:
     CUSTOMER_SCHEMA = "Schema details unavailable."
 
 # The tools used by data agents (Analysis and Segmentation)
-data_tools = [bq_mcp_toolset] if bq_mcp_toolset else []
+data_tools = []
+if bq_mcp_toolset:
+    data_tools.append(bq_mcp_toolset)
 
 
 # Plugin for self-healing/retry on tool failures - specialized for BigQuery

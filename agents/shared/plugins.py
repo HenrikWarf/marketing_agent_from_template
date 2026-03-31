@@ -9,6 +9,25 @@ class BigQueryReflectRetryPlugin(ReflectAndRetryToolPlugin):
     successful tool responses that contain error fields.
     """
     
+    async def extract_error_from_exception(
+        self,
+        *,
+        tool: BaseTool,
+        tool_args: dict[str, Any],
+        tool_context: ToolContext,
+        exception: Exception,
+    ) -> Optional[dict[str, Any]]:
+        """
+        Catch actual exceptions raised during the tool call.
+        If it's a TaskGroup error, we want to retry it.
+        """
+        err_str = str(exception)
+        if "TaskGroup" in err_str or "unhandled errors" in err_str:
+            print(f"DEBUG: Caught TaskGroup exception in plugin: {err_str}")
+            return {"error": f"Transient connection error (TaskGroup): {err_str}"}
+        
+        return None
+
     async def extract_error_from_result(
         self, 
         *, 

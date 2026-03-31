@@ -190,21 +190,31 @@ class RemoteBackend(BaseBackend):
                 async for c in generator:
                     yield c
 
+            class DefaultEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if hasattr(obj, "to_dict"):
+                        return obj.to_dict()
+                    # Handle Enums
+                    import enum
+                    if isinstance(obj, enum.Enum):
+                        return obj.value
+                    return str(obj)
+
             async for chunk in combined_stream():
-                print(f"DEBUG: Remote chunk type: {type(chunk)}")
-                # Map the chunk to the SSE format expected by the UI
-                # UI expects data: {"content": {"parts": [{"text": "..."}]}}
-                
-                # SDK might return Content objects or dicts depending on how it's called
-                if hasattr(chunk, "content"):
-                    # If it's a Content object
-                    content_dict = {"role": chunk.role, "parts": [{"text": p.text} for p in chunk.parts if hasattr(p, "text")]}
-                    yield f"data: {json.dumps({'content': content_dict})}\n\n"
+                # ADK Event objects or dicts
+                if hasattr(chunk, "model_dump"):
+                    yield f"data: {json.dumps(chunk.model_dump(), cls=DefaultEncoder)}\n\n"
+                elif hasattr(chunk, "to_dict"):
+                    yield f"data: {json.dumps(chunk.to_dict(), cls=DefaultEncoder)}\n\n"
                 elif isinstance(chunk, dict):
-                    # ADK usually returns dicts when called via the raw execution API
-                    # The format is often already the event dict
-                    if "content" in chunk:
-                        yield f"data: {json.dumps(chunk)}\n\n"
+                    # Ensure we pass through metadata for breadcrumbs if it's there
+                    metadata_keys = ["agent_name", "agentName", "tool_call", "toolCall", "tool_calls", "toolCalls", "tool_response", "toolResponse", "tool_call_result", "toolCallResult"]
+                    if any(k in chunk for k in metadata_keys):
+                        yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
+                    elif "content" in chunk:
+                        yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
                     elif "text" in chunk:
                         # Sometimes it's just a text chunk
                         yield f"data: {json.dumps({'content': {'parts': [{'text': chunk['text']}]}})}\n\n"
@@ -218,7 +228,6 @@ class RemoteBackend(BaseBackend):
                     # Try to serialize whatever it is
                     yield f"data: {json.dumps({'content': {'parts': [{'text': str(chunk)}]}})}\n\n"
 
-                    
         except Exception as e:
             import traceback
             traceback.print_exc()
