@@ -25,10 +25,15 @@ def setup_telemetry() -> str | None:
         "OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT", "false"
     )
     if bucket and capture_content != "false":
-        logging.info(
-            "Prompt-response logging enabled - mode: NO_CONTENT (metadata only, no prompts/responses)"
-        )
-        os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "NO_CONTENT"
+        if capture_content.lower() == "true":
+            logging.info("Prompt-response logging enabled - mode: SIMPLE (full prompts/responses captured)")
+            os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "SIMPLE"
+        else:
+            logging.info(
+                "Prompt-response logging enabled - mode: NO_CONTENT (metadata only, no prompts/responses)"
+            )
+            os.environ["OTEL_INSTRUMENTATION_GENAI_CAPTURE_MESSAGE_CONTENT"] = "NO_CONTENT"
+        
         os.environ.setdefault("OTEL_INSTRUMENTATION_GENAI_UPLOAD_FORMAT", "jsonl")
         os.environ.setdefault("OTEL_INSTRUMENTATION_GENAI_COMPLETION_HOOK", "upload")
         os.environ.setdefault(
