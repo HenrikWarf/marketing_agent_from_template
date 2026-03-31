@@ -25,9 +25,11 @@ class LocalBackend(BaseBackend):
                 if response.status_code == 200:
                     data = response.json()
                     if data:
+                        # Filter out known utility/shared directories that aren't agents
                         return [
                             {"id": name, "name": name.replace("_", " ").title()}
                             for name in data
+                            if name not in ["shared", "app_utils", "shared_tools"]
                         ]
         except Exception as e:
             print(f"LocalBackend list_agents error: {e}")
