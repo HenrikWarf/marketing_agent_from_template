@@ -36,6 +36,22 @@ A production-ready base template for building ADK agents with a **Hub-and-Spoke*
   - **Always Backend-Driven**: Remote Vertex AI instances reject user-provided session IDs.
   - **Synchronous fallback**: Use `engine.create_session` for remote backends as some SDK versions lack the stable `async_create_session` attribute on the `AgentEngine` object.
 
+## Troubleshooting & Resilience (Lessons Learned)
+
+### 1. Unified Authentication Model
+- **Issue**: Brittle environment branching (`IS_ON_GCP` checks) often fails across different Vertex AI runtimes where standard env vars (like `K_SERVICE`) may be missing.
+- **Fix**: Always use a unified `header_provider` in `agents/shared/tools.py` that relies on `google.auth.default()`.
+- **Benefit**: This ensures that local development (ADC) and cloud deployment (Service Account) use identical authentication logic, making local tests a reliable proxy for cloud behavior.
+
+### 2. Handling TaskGroup Crashes
+- **Issue**: Transient connection errors in the MCP/Vertex stack often manifest as "unhandled errors in a TaskGroup," which can crash the entire session runner.
+- **Fix**: Implement `extract_error_from_exception` in the `BigQueryReflectRetryPlugin`.
+- **Benefit**: This catches low-level `TaskGroup` exceptions during tool execution and converts them into "error" feedback for the agent. This triggers the ADK retry logic instead of a session-ending crash.
+
+### 3. Safe Tool Initialization
+- **Issue**: Passing `None` or failed toolsets into an `Agent` can cause cryptic crashes during the initialization of the session runner.
+- **Fix**: In `agents/marketing_agent/agent.py`, always use an explicit list construction: `data_tools = [bq_mcp_toolset] if bq_mcp_toolset else []`.
+
 ## File Structure Mandates
 - **Primary Agents**: `agents/marketing_agent/agent.py`
 - **Infrastructure**: `deployment/terraform/`
