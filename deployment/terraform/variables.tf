@@ -28,6 +28,11 @@ variable "staging_project_id" {
   description = "**Staging** Google Cloud Project ID for resource deployment."
 }
 
+variable "dev_project_id" {
+  type        = string
+  description = "**Development** Google Cloud Project ID for manual resource deployment."
+}
+
 variable "cicd_runner_project_id" {
   type        = string
   description = "Google Cloud Project ID where CI/CD pipelines will execute."
