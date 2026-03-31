@@ -2,6 +2,7 @@ import os
 import json
 import httpx
 import vertexai
+import enum
 from typing import AsyncGenerator, Dict, Any, List
 
 class BaseBackend:
@@ -91,13 +92,24 @@ class RemoteBackend(BaseBackend):
         self._engine = None
         self._client = None
         
-        # Initialize vertexai for this project/location
-        vertexai.init(project=project, location=location)
+        # Initialize vertexai safely
+        try:
+            if project:
+                vertexai.init(project=project, location=location)
+                print(f"Vertex AI initialized for project: {project}")
+            else:
+                print("Warning: GOOGLE_CLOUD_PROJECT not set, skipping vertexai.init")
+        except Exception as e:
+            print(f"Error during vertexai.init: {e}")
 
     def _get_engine(self):
         if not self._engine:
-            self._client = vertexai.Client(project=self.project, location=self.location)
-            self._engine = self._client.agent_engines.get(name=self.resource_name)
+            try:
+                self._client = vertexai.Client(project=self.project, location=self.location)
+                self._engine = self._client.agent_engines.get(name=self.resource_name)
+            except Exception as e:
+                print(f"Error getting Agent Engine: {e}")
+                raise e
         return self._engine
 
     async def list_agents(self) -> List[Dict[str, str]]:

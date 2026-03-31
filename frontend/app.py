@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
+from fastapi.middleware.cors import CORSMiddleware
 from dotenv import load_dotenv
 from frontend.backends import get_backend_manager
 
@@ -9,6 +10,15 @@ from frontend.backends import get_backend_manager
 load_dotenv()
 
 app = FastAPI()
+
+# Add CORS middleware for React development
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Configuration
 CONFIG = {
@@ -26,17 +36,21 @@ app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 @app.get("/api/environments")
 async def list_environments():
     """List available deployment environments."""
-    envs = [
-        {"id": "local", "name": "Local (adk web)", "type": "local"}
-    ]
-    if CONFIG["DEV_AGENT_ENGINE_ID"]:
-        envs.append({"id": "dev", "name": "Development (Cloud)", "type": "remote"})
-    if CONFIG["STAGING_AGENT_ENGINE_ID"]:
-        envs.append({"id": "staging", "name": "Staging (Cloud)", "type": "remote"})
-    if CONFIG["PROD_AGENT_ENGINE_ID"]:
-        envs.append({"id": "prod", "name": "Production (Cloud)", "type": "remote"})
-    
-    return {"environments": envs}
+    try:
+        envs = [
+            {"id": "local", "name": "Local (adk web)", "type": "local"}
+        ]
+        if CONFIG["DEV_AGENT_ENGINE_ID"]:
+            envs.append({"id": "dev", "name": "Development (Cloud)", "type": "remote"})
+        if CONFIG["STAGING_AGENT_ENGINE_ID"]:
+            envs.append({"id": "staging", "name": "Staging (Cloud)", "type": "remote"})
+        if CONFIG["PROD_AGENT_ENGINE_ID"]:
+            envs.append({"id": "prod", "name": "Production (Cloud)", "type": "remote"})
+        
+        return {"environments": envs}
+    except Exception as e:
+        print(f"Error in list_environments: {e}")
+        return {"environments": [], "error": str(e)}
 
 @app.get("/api/agents")
 async def list_agents(env: str = Query("local")):

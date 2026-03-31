@@ -21,3 +21,4 @@ nanobanana-output/
 .terraform/
 *.tfstate
 *.tfstate.*
+node_modules/
