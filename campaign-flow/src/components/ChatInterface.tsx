@@ -10,6 +10,14 @@ interface ChatInterfaceProps {
   onNewSession: () => void;
 }
 
+const TypingIndicator = () => (
+  <div className="typing-indicator" style={{ alignSelf: 'flex-start', margin: '8px 0' }}>
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+    <div className="typing-dot"></div>
+  </div>
+);
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   currentEnv, 
   agentId, 
@@ -19,6 +27,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [input, setInput] = useState('');
   const { messages, isStreaming, currentAgent, activeTool, sendMessage } = useChatStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -26,7 +35,14 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, activeTool]);
+  }, [messages, activeTool, isStreaming]);
+
+  // Maintain focus on input field
+  useEffect(() => {
+    if (!isStreaming) {
+      inputRef.current?.focus();
+    }
+  }, [isStreaming]);
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
@@ -35,7 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     sendMessage(text, currentEnv, agentId, sessionId);
   };
 
-  const getAgentDisplay = (id: string | null) => {
+  const getAgentDisplay = (id?: string | null) => {
     if (!id) return null;
     return id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
   };
@@ -68,28 +84,42 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
       </header>
 
       <div style={{ flex: 1, overflowY: 'auto', padding: '16px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-        {messages.map((msg, i) => (
-          <div 
-            key={i} 
-            style={{ 
-              alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
-              maxWidth: '90%',
-              padding: msg.role === 'user' ? '10px 16px' : '0',
-              borderRadius: '18px 18px 4px 18px',
-              backgroundColor: msg.role === 'user' ? '#f1f3f4' : 'transparent',
-              fontSize: '0.95rem'
-            }}
-          >
-            {msg.role === 'model' && (
-              <div style={{ fontSize: '0.75rem', color: 'var(--google-gray)', marginBottom: '4px', fontWeight: 500 }}>
-                {getAgentDisplay(currentAgent) || 'Agent'}
+        {messages.map((msg, i) => {
+          // If the last message is from model and empty while streaming, it's the "thinking" placeholder
+          if (msg.role === 'model' && i === messages.length - 1 && isStreaming && !msg.parts[0].text) {
+            return null; 
+          }
+          
+          if (!msg.parts[0].text && msg.role === 'model') return null;
+
+          return (
+            <div 
+              key={i} 
+              style={{ 
+                alignSelf: msg.role === 'user' ? 'flex-end' : 'flex-start',
+                maxWidth: msg.role === 'user' ? '75%' : '90%',
+                padding: msg.role === 'user' ? '6px 14px' : '0',
+                borderRadius: '18px 18px 4px 18px',
+                backgroundColor: msg.role === 'user' ? '#f1f3f4' : 'transparent',
+                fontSize: '0.92rem',
+                boxShadow: msg.role === 'user' ? '0 1px 2px rgba(0,0,0,0.05)' : 'none',
+                lineHeight: '1.4'
+              }}
+            >
+              {msg.role === 'model' && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--google-gray)', marginBottom: '4px', fontWeight: 500 }}>
+                  {getAgentDisplay(msg.agentId) || 'Agent'}
+                </div>
+              )}
+              <div style={{ lineHeight: '1.5' }} className="markdown-body">
+                <ReactMarkdown>{msg.parts.map(p => p.text).join('')}</ReactMarkdown>
               </div>
-            )}
-            <div style={{ lineHeight: '1.5' }}>
-              <ReactMarkdown>{msg.parts.map(p => p.text).join('')}</ReactMarkdown>
             </div>
-          </div>
-        ))}
+          );
+        })}
+        
+        {isStreaming && !messages[messages.length-1]?.parts[0]?.text && <TypingIndicator />}
+
         {activeTool && (
           <div style={{ 
             alignSelf: 'flex-start', 
@@ -116,6 +146,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
           alignItems: 'center'
         }}>
           <input 
+            ref={inputRef}
             type="text"
             value={input}
             onChange={(e) => setInput(e.target.value)}
@@ -130,6 +161,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
               fontSize: '0.95rem'
             }}
             disabled={isStreaming}
+            autoFocus
           />
           <button 
             onClick={handleSend}

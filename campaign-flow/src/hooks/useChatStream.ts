@@ -4,6 +4,7 @@ import { useBlackboard } from '../context/BlackboardContext';
 export interface Message {
   role: 'user' | 'model';
   parts: { text: string }[];
+  agentId?: string; // NEW: Track which agent sent this specific message
 }
 
 export interface ChatEvent {
@@ -42,7 +43,7 @@ export const useChatStream = () => {
     setMessages(prev => [...prev, userMsg]);
 
     // Prepare model message placeholder
-    let modelMsg: Message = { role: 'model', parts: [{ text: '' }] };
+    let modelMsg: Message = { role: 'model', parts: [{ text: '' }], agentId: agentId };
     setMessages(prev => [...prev, modelMsg]);
 
     try {
@@ -85,7 +86,18 @@ export const useChatStream = () => {
 
               // Update Agent & Tool Status
               const agentName = data.author || data.agent_name;
-              if (agentName) setCurrentAgent(agentName);
+              if (agentName) {
+                setCurrentAgent(agentName);
+                // NEW: Update the current message's specific agentId
+                setMessages(prev => {
+                  const newMsgs = [...prev];
+                  const last = newMsgs[newMsgs.length - 1];
+                  if (last && last.role === 'model') {
+                    last.agentId = agentName;
+                  }
+                  return newMsgs;
+                });
+              }
 
               if (data.actions && Array.isArray(data.actions)) {
                 const lastAction = data.actions[data.actions.length - 1];
@@ -95,6 +107,7 @@ export const useChatStream = () => {
 
               // Update Blackboard State
               if (data.session_state) {
+                console.log("Blackboard Update:", data.session_state);
                 updateState(data.session_state);
               }
 
@@ -109,11 +122,36 @@ export const useChatStream = () => {
                     fullText += chunkText;
                   }
 
+                  let cleanText = fullText;
+                  
+                  // TRY TO PARSE JSON FROM MESSAGE
+                  const jsonMatch = fullText.match(/\{[\s\S]*\}/);
+                  if (jsonMatch) {
+                    try {
+                      const potentialJson = jsonMatch[0];
+                      const parsed = JSON.parse(potentialJson);
+                      const isDataSchema = parsed.summary || parsed.segments || parsed.content_drafts || parsed.status || parsed.drafts || parsed.social_posts || parsed.posts;
+                      
+                      if (isDataSchema) {
+                        console.log("Detected structured data in message text, updating blackboard:", parsed);
+                        if (parsed.summary) updateState({ analysis_data: parsed });
+                        if (parsed.segments) updateState({ segments_data: parsed });
+                        if (parsed.content_drafts || parsed.drafts || parsed.social_posts || parsed.posts) updateState({ content_data: parsed });
+                        if (parsed.status) updateState({ review_data: parsed });
+                        cleanText = fullText.replace(potentialJson, '').replace(/```json|```/g, '').trim();
+                      }
+                    } catch (e) {}
+                  }
+
+                  if (!cleanText && jsonMatch) {
+                    cleanText = "_Structured data received. See dashboard for details._";
+                  }
+
                   setMessages(prev => {
                     const newMsgs = [...prev];
                     newMsgs[newMsgs.length - 1] = { 
-                      role: 'model', 
-                      parts: [{ text: fullText }] 
+                      ...newMsgs[newMsgs.length - 1],
+                      parts: [{ text: cleanText }] 
                     };
                     return newMsgs;
                   });
@@ -131,7 +169,8 @@ export const useChatStream = () => {
         const newMsgs = [...prev];
         newMsgs[newMsgs.length - 1] = { 
           role: 'model', 
-          parts: [{ text: `Error: ${error.message}` }] 
+          parts: [{ text: `Error: ${error.message}` }],
+          agentId: agentId
         };
         return newMsgs;
       });

@@ -79,7 +79,24 @@ class LocalBackend(BaseBackend):
                         return
 
                     async for line in response.aiter_lines():
-                        if line:
+                        if line.startswith("data: "):
+                            try:
+                                raw_data = line[6:]
+                                if raw_data == "[DONE]":
+                                    yield f"{line}\n\n"
+                                    continue
+                                    
+                                data = json.loads(raw_data)
+                                
+                                # If the ADK server provides session_state, ensure it's passed through
+                                # Some versions might wrap it or put it in different places
+                                if "session_state" not in data and "state" in data:
+                                    data["session_state"] = data["state"]
+                                    
+                                yield f"data: {json.dumps(data)}\n\n"
+                            except Exception:
+                                yield f"{line}\n\n"
+                        elif line:
                             yield f"{line}\n\n"
         except Exception as e:
             yield f"data: {{\"error\": \"Local proxy error: {str(e)}\"}}\n\n"

@@ -33,19 +33,7 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
         )}
       </div>
       <div className="card-content">
-        {isEmpty ? (
-          <div style={{ 
-            height: '100%', 
-            display: 'flex', 
-            alignItems: 'center', 
-            justifyContent: 'center',
-            color: 'var(--google-gray)',
-            fontSize: '0.9rem',
-            fontStyle: 'italic'
-          }}>
-            Waiting for data...
-          </div>
-        ) : children}
+        {isEmpty ? null : children}
       </div>
     </div>
   );

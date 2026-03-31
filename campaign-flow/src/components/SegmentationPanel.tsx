@@ -6,7 +6,7 @@ const SegmentationPanel: React.FC<{ data: SegmentationData }> = ({ data }) => {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
       <div style={{ display: 'grid', gap: '12px' }}>
-        {data.segments.map((segment, i) => (
+        {data.segments ? data.segments.map((segment, i) => (
           <div key={i} style={{ 
             border: '1px solid var(--border-color)', 
             borderRadius: '12px', 
@@ -30,7 +30,7 @@ const SegmentationPanel: React.FC<{ data: SegmentationData }> = ({ data }) => {
               {segment.description}
             </p>
           </div>
-        ))}
+        )) : <div style={{ textAlign: 'center', color: 'var(--google-gray)' }}>No segments defined.</div>}
       </div>
       
       {data.logic_reasoning && (

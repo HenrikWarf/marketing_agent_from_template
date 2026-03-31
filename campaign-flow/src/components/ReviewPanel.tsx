@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactMarkdown from 'react-markdown';
 import { ReviewData } from '../context/BlackboardContext';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
@@ -47,9 +48,11 @@ const ReviewPanel: React.FC<{ data: ReviewData }> = ({ data }) => {
         <span>{status.text}</span>
       </div>
 
-      <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }}>
+      <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }} className="markdown-body">
         <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: 'var(--google-gray)', fontWeight: 700 }}>FEEDBACK</h4>
-        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>{data.feedback}</p>
+        <div style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
+          <ReactMarkdown>{data.feedback}</ReactMarkdown>
+        </div>
       </div>
 
       <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
