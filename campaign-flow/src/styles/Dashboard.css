@@ -95,6 +95,19 @@
   color: var(--google-gray);
   transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   border: 2px solid transparent;
+  position: relative; /* Added for dot positioning */
+}
+
+.menu-data-dot {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 8px;
+  height: 8px;
+  background-color: #bdc1c6; /* Grey dot */
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  z-index: 10;
 }
 
 .menu-item:hover {

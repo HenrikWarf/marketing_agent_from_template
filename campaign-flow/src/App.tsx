@@ -86,6 +86,7 @@ const Dashboard: React.FC = () => {
             style={{ '--active-color': view.color } as any}
           >
             <view.icon size={20} />
+            {view.data && <div className="menu-data-dot" />}
           </div>
         ))}
       </nav>
