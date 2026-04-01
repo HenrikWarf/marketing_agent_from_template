@@ -24,8 +24,8 @@
 }
 
 .segment-name {
-  fontWeight: 500;
-  fontSize: 0.95rem;
+  font-weight: 500;
+  font-size: 0.95rem;
 }
 
 .segment-count-badge {

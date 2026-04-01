@@ -30,8 +30,8 @@
 }
 
 .metric-label {
-  fontWeight: 600;
-  fontSize: 0.8rem;
+  font-weight: 600;
+  font-size: 0.8rem;
   color: var(--google-blue);
   text-transform: uppercase;
   margin-bottom: 4px;

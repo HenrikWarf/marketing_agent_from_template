@@ -49,8 +49,8 @@
 }
 
 .banner-label {
-  fontSize: 0.75rem;
-  fontWeight: 700;
+  font-size: 0.75rem;
+  font-weight: 700;
   color: var(--google-gray);
   display: block;
   margin-bottom: 2px;
