@@ -7,6 +7,13 @@ export interface Message {
   agentId?: string;
 }
 
+export interface AgentStep {
+  id: string;
+  name: string;
+  status?: string;
+  active: boolean;
+}
+
 export interface ChatEvent {
   author?: string;
   agent_name?: string;
@@ -26,6 +33,7 @@ export const useChatStream = () => {
   const [isStreaming, setIsStreaming] = useState(false);
   const [currentAgent, setCurrentAgent] = useState<string | null>(null);
   const [activeTool, setActiveTool] = useState<string | null>(null);
+  const [agentHistory, setAgentHistory] = useState<AgentStep[]>([]);
   const { updateState } = useBlackboard();
 
   const sendMessage = useCallback(async (
@@ -39,6 +47,7 @@ export const useChatStream = () => {
     setIsStreaming(true);
     setActiveTool(null);
     setCurrentAgent(agentId);
+    setAgentHistory([{ id: agentId, name: agentId.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), active: true }]);
     
     setMessages(prev => [
       ...prev, 
@@ -77,9 +86,6 @@ export const useChatStream = () => {
           const dataKeys = ['summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
           
           if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
-            console.log("HOOK: Match found in text stream!", parsed);
-            
-            // Push to blackboard
             if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
             else if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
             else if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
@@ -106,14 +112,39 @@ export const useChatStream = () => {
 
               const data: ChatEvent = JSON.parse(rawData);
 
+              // 1. Handle Metadata (Agent Name, Tools)
               const agentName = data.author || data.agent_name;
-              if (agentName) {
+              if (agentName && agentName !== lastKnownAgent) {
                 lastKnownAgent = agentName;
                 setCurrentAgent(agentName);
+                setAgentHistory(prev => {
+                  const next = prev.map(s => ({ ...s, active: false }));
+                  return [...next, { 
+                    id: agentName, 
+                    name: agentName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
+                    active: true 
+                  }];
+                });
               }
 
+              const updateActiveTool = (statusText: string) => {
+                setActiveTool(statusText);
+                setAgentHistory(prev => {
+                  if (prev.length === 0) return prev;
+                  const next = [...prev];
+                  next[next.length - 1].status = statusText;
+                  return next;
+                });
+              };
+
+              if (data.actions && Array.isArray(data.actions)) {
+                const lastAction = data.actions[data.actions.length - 1];
+                if (lastAction.tool_call) updateActiveTool(`Executing ${lastAction.tool_call.name}...`);
+                if (lastAction.tool_response) updateActiveTool(`Finished ${lastAction.tool_response.name}`);
+              }
+
+              // 2. Blackboard State
               if (data.session_state) {
-                console.log("HOOK: Received explicit session_state", data.session_state);
                 updateState(data.session_state);
                 if (data.session_state.analysis_data) onDataReceived?.('analysis');
                 if (data.session_state.segments_data) onDataReceived?.('segmentation');
@@ -121,6 +152,7 @@ export const useChatStream = () => {
                 if (data.session_state.review_data) onDataReceived?.('review');
               }
 
+              // 3. Content Streaming
               if (data.content && data.content.parts) {
                 const chunkText = data.content.parts.map(p => p.text || '').join('');
                 if (chunkText) {
@@ -133,7 +165,6 @@ export const useChatStream = () => {
                   const { isMatch, content } = processJsonInText(fullText);
                   let finalDisplay = content;
                   
-                  // If it looks like JSON but isn't valid yet, hide it
                   if (!isMatch && fullText.trim().startsWith('{') && fullText.trim().length > 5) {
                     finalDisplay = "...";
                   }
@@ -155,7 +186,6 @@ export const useChatStream = () => {
         }
       }
       
-      // Final pass after stream finishes to ensure everything was caught
       const { isMatch } = processJsonInText(fullText);
       if (isMatch) {
         setMessages(prev => {
@@ -169,10 +199,15 @@ export const useChatStream = () => {
       console.error(error);
     } finally {
       setIsStreaming(false);
+      setActiveTool(null);
+      setAgentHistory(prev => prev.map(s => ({ ...s, active: false })));
     }
   }, [updateState]);
 
-  const clearMessages = () => setMessages([]);
+  const clearMessages = () => {
+    setMessages([]);
+    setAgentHistory([]);
+  };
 
-  return { messages, isStreaming, currentAgent, activeTool, sendMessage, clearMessages };
+  return { messages, isStreaming, currentAgent, activeTool, agentHistory, sendMessage, clearMessages };
 };

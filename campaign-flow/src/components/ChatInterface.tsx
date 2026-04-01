@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Plus, RefreshCw, PenTool } from 'lucide-react';
-import { useChatStream } from '../hooks/useChatStream';
+import { Send, Plus, RefreshCw, PenTool, ChevronRight } from 'lucide-react';
+import { useChatStream, AgentStep } from '../hooks/useChatStream';
 import '../styles/ChatInterface.css';
 
 interface ChatInterfaceProps {
@@ -20,6 +20,33 @@ const TypingIndicator = () => (
   </div>
 );
 
+const WorkflowBreadcrumbs: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
+  if (steps.length === 0) return null;
+
+  return (
+    <div className="workflow-container">
+      {steps.map((step, i) => (
+        <React.Fragment key={i}>
+          <div className={`workflow-node node-${step.id} ${step.active ? 'active' : ''}`}>
+            <div className="workflow-dot" />
+            <div className="workflow-label-area">
+              <span className="workflow-name">{step.name}</span>
+              {step.active && step.status && (
+                <span className="workflow-status">{step.status}</span>
+              )}
+            </div>
+          </div>
+          {i < steps.length - 1 && (
+            <div className="workflow-arrow">
+              <ChevronRight size={14} />
+            </div>
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   currentEnv, 
   agentId, 
@@ -28,7 +55,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   onDataReceived
 }) => {
   const [input, setInput] = useState('');
-  const { messages, isStreaming, currentAgent, activeTool, sendMessage } = useChatStream();
+  const { messages, isStreaming, currentAgent, activeTool, agentHistory, sendMessage } = useChatStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
 
@@ -38,7 +65,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, activeTool, isStreaming]);
+  }, [messages, activeTool, isStreaming, agentHistory]);
 
   // Maintain focus on input field
   useEffect(() => {
@@ -86,7 +113,6 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       <div className="messages-list">
         {messages.map((msg, i) => {
-          // If the last message is from model and empty while streaming, it's the "thinking" placeholder
           if (msg.role === 'model' && i === messages.length - 1 && isStreaming && !msg.parts[0].text) {
             return null; 
           }
@@ -112,12 +138,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
         
         {isStreaming && !messages[messages.length-1]?.parts[0]?.text && <TypingIndicator />}
 
-        {activeTool && (
-          <div className="tool-activity">
-            <RefreshCw size={14} className="animate-spin" />
-            {activeTool}
-          </div>
-        )}
+        {isStreaming && <WorkflowBreadcrumbs steps={agentHistory} />}
+
         <div ref={messagesEndRef} />
       </div>
 
