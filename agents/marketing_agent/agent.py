@@ -158,10 +158,10 @@ root_agent = Agent(
     
     WORKFLOW:
     - If data needs to be explored or trends identified -> Transfer to analysis_agent.
-    - If analysis is done (`analysis_data` is present) but segments are missing -> Transfer to segmentation_agent.
-    - If segments are defined (`segments_data` is present) but content is missing -> Transfer to content_agent.
-    - If content is drafted (`content_data` is present) -> Transfer to reviewer_agent.
-    - If reviewer rejects content (`review_data.status` is 'REJECTED') -> Send feedback back to content_agent.
+    - If analysis is done (`analysis_data` is present) but segments are missing -> Transfer to segmentation_agent using the analysis insights.
+    - If segments are defined (`segments_data` is present) but content is missing -> Transfer to content_agent using the segments.
+    - If content is drafted (`content_data` is present) -> Transfer to reviewer_agent and EXPLICITLY provide the content drafts from the blackboard for review.
+    - If reviewer rejects content (`review_data.status` is 'REJECTED') -> Send the feedback back to content_agent for revision.
     - If reviewer verifies content (`review_data.status` is 'VERIFIED') -> Present the final verified content to the user and conclude the task.
     
     You are the only agent that speaks directly to the end-user.

@@ -1,14 +1,162 @@
-.card-header-icon {
-  padding: 8px;
+.card {
+  background: var(--surface-color);
   border-radius: 12px;
+  border: 1px solid #e0e2e6;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  height: min-content;
+  position: relative;
+}
+
+/* Elevation & Hover states */
+.card.minimized {
+  background: #fdfdfd;
+  cursor: pointer;
+}
+
+.card.minimized:hover {
+  background: white;
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.card.expanded {
+  background: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-color: #d1d4d9;
+}
+
+/* Left Accent Strip */
+.card.expanded::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--accent-color);
+  z-index: 5;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  user-select: none;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
   display: flex;
   align-items: center;
   justify-content: center;
+  background-color: rgba(0, 0, 0, 0.03);
+  color: var(--accent-color);
+  transition: all 0.3s ease;
 }
 
-.status-indicator {
-  margin-left: auto;
-  width: 8px;
-  height: 8px;
+.card.populated .icon-box {
+  background-color: color-mix(in srgb, var(--accent-color), transparent 90%);
+}
+
+.title-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f1f1f;
+  letter-spacing: -0.01em;
+}
+
+.updated-timestamp {
+  font-size: 0.7rem;
+  color: #80868b;
+  margin-top: 1px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+/* Professional Status Pill */
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #e6f4ea;
+  color: #137333;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-dot-inner {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
   border-radius: 50%;
+}
+
+.chevron-box {
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chevron-box.rotated {
+  transform: rotate(90deg);
+}
+
+/* Content Reveal Animation */
+.card-content-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s ease, opacity 0.3s ease;
+  opacity: 0;
+}
+
+.card-content-wrapper.show {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.card-content {
+  overflow: hidden;
+}
+
+.content-inner {
+  padding: 4px 20px 20px 20px;
+  border-top: 1px solid #f1f3f4;
+  margin-top: -1px;
+}
+
+/* Populated animation pulse */
+@keyframes highlight-fade {
+  0% { background-color: white; }
+  20% { background-color: color-mix(in srgb, var(--accent-color), transparent 95%); }
+  100% { background-color: white; }
+}
+
+.card.populated.expanded {
+  animation: highlight-fade 2s ease-out forwards;
 }

@@ -9,6 +9,7 @@ interface ChatInterfaceProps {
   agentId: string;
   sessionId: string;
   onNewSession: () => void;
+  onDataReceived?: (type: string) => void;
 }
 
 const TypingIndicator = () => (
@@ -23,7 +24,8 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   currentEnv, 
   agentId, 
   sessionId, 
-  onNewSession 
+  onNewSession,
+  onDataReceived
 }) => {
   const [input, setInput] = useState('');
   const { messages, isStreaming, currentAgent, activeTool, sendMessage } = useChatStream();
@@ -49,7 +51,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     if (!input.trim() || isStreaming) return;
     const text = input;
     setInput('');
-    sendMessage(text, currentEnv, agentId, sessionId);
+    sendMessage(text, currentEnv, agentId, sessionId, onDataReceived);
   };
 
   const getAgentDisplay = (id?: string | null) => {
