@@ -2,6 +2,7 @@ import React from 'react';
 import ReactMarkdown from 'react-markdown';
 import { ReviewData } from '../context/BlackboardContext';
 import { CheckCircle, XCircle, AlertCircle } from 'lucide-react';
+import '../styles/ReviewPanel.css';
 
 const ReviewPanel: React.FC<{ data: ReviewData }> = ({ data }) => {
   const getStatusDisplay = () => {
@@ -33,35 +34,32 @@ const ReviewPanel: React.FC<{ data: ReviewData }> = ({ data }) => {
   const status = getStatusDisplay();
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <div style={{ 
-        display: 'flex', 
-        alignItems: 'center', 
-        gap: '10px', 
-        padding: '12px 16px', 
-        borderRadius: '12px', 
-        backgroundColor: status.bg,
-        color: status.color,
-        fontWeight: 500
-      }}>
+    <div className="review-container">
+      <div 
+        className="status-banner"
+        style={{ 
+          backgroundColor: status.bg,
+          color: status.color
+        }}
+      >
         {status.icon}
         <span>{status.text}</span>
       </div>
 
-      <div style={{ background: '#f8f9fa', padding: '16px', borderRadius: '12px', border: '1px solid var(--border-color)' }} className="markdown-body">
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.85rem', color: 'var(--google-gray)', fontWeight: 700 }}>FEEDBACK</h4>
-        <div style={{ fontSize: '0.95rem', lineHeight: '1.5' }}>
+      <div className="feedback-section">
+        <h4 className="feedback-title">FEEDBACK</h4>
+        <div className="feedback-content markdown-body">
           <ReactMarkdown>{data.feedback}</ReactMarkdown>
         </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.85rem' }}>
-        <div style={{ 
-          width: '12px', 
-          height: '12px', 
-          borderRadius: '50%', 
-          backgroundColor: data.guideline_check ? '#1e8e3e' : '#dadce0' 
-        }} />
+      <div className="compliance-check">
+        <div 
+          className="compliance-dot"
+          style={{ 
+            backgroundColor: data.guideline_check ? '#1e8e3e' : '#dadce0' 
+          }} 
+        />
         <span>Guideline Compliance Check</span>
       </div>
     </div>

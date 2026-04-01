@@ -1,5 +1,6 @@
 import React from 'react';
 import { AnalysisData } from '../context/BlackboardContext';
+import '../styles/AnalysisPanel.css';
 
 const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
   const renderMetricValue = (key: string, val: any) => {
@@ -7,20 +8,20 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
     if (Array.isArray(val) && val.length > 0 && typeof val[0] === 'object') {
       const headers = Object.keys(val[0]);
       return (
-        <div style={{ marginTop: '8px', overflowX: 'auto', width: '100%' }}>
-          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+        <div className="data-table-container">
+          <table className="data-table">
             <thead>
-              <tr style={{ textAlign: 'left', borderBottom: '2px solid #eee' }}>
+              <tr>
                 {headers.map(h => (
-                  <th key={h} style={{ padding: '6px 8px', textTransform: 'capitalize' }}>{h.replace(/_/g, ' ')}</th>
+                  <th key={h}>{h.replace(/_/g, ' ')}</th>
                 ))}
               </tr>
             </thead>
             <tbody>
               {val.map((item, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid #f0f0f0' }}>
+                <tr key={i}>
                   {headers.map(h => (
-                    <td key={h} style={{ padding: '6px 8px' }}>
+                    <td key={h}>
                       {typeof item[h] === 'number' ? item[h].toLocaleString(undefined, {maximumFractionDigits: 3}) : String(item[h])}
                     </td>
                   ))}
@@ -37,19 +38,19 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
       const entries = Object.entries(val);
       if (entries.length > 0) {
         return (
-          <div style={{ marginTop: '8px', overflowX: 'auto', width: '100%' }}>
-            <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.85rem' }}>
+          <div className="data-table-container">
+            <table className="data-table">
               <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid #eee' }}>
-                  <th style={{ padding: '4px 8px' }}>Key</th>
-                  <th style={{ padding: '4px 8px' }}>Value</th>
+                <tr>
+                  <th>Key</th>
+                  <th>Value</th>
                 </tr>
               </thead>
               <tbody>
                 {entries.map(([k, v]) => (
-                  <tr key={k} style={{ borderBottom: '1px solid #f9f9f9' }}>
-                    <td style={{ padding: '4px 8px', color: 'var(--google-gray)' }}>{k}</td>
-                    <td style={{ padding: '4px 8px', fontWeight: 500 }}>
+                  <tr key={k}>
+                    <td style={{ color: 'var(--google-gray)' }}>{k}</td>
+                    <td style={{ fontWeight: 500 }}>
                       {typeof v === 'number' ? v.toFixed(3) : (typeof v === 'object' ? JSON.stringify(v) : String(v))}
                     </td>
                   </tr>
@@ -66,7 +67,7 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
       return (
         <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '4px' }}>
           {val.map((v, i) => (
-            <span key={i} style={{ background: '#f1f3f4', padding: '2px 8px', borderRadius: '4px', fontSize: '0.8rem' }}>
+            <span key={i} className="simple-metric-tag">
               {String(v)}
             </span>
           ))}
@@ -80,26 +81,21 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
   };
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+    <div className="analysis-container">
       <div>
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--google-gray)' }}>Summary</h4>
-        <p style={{ margin: 0, fontSize: '0.95rem', lineHeight: '1.5' }}>{data.summary}</p>
+        <h4 className="section-title">Summary</h4>
+        <p className="summary-text">{data.summary}</p>
       </div>
       
       <div>
-        <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--google-gray)' }}>Key Metrics</h4>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+        <h4 className="section-title">Key Metrics</h4>
+        <div className="metrics-list">
           {data.key_metrics && Object.keys(data.key_metrics).length > 0 ? Object.entries(data.key_metrics).map(([key, value]) => (
-            <div key={key} style={{ 
-              background: '#f8f9fa', 
-              padding: '12px', 
-              borderRadius: '12px',
-              border: '1px solid #eee'
-            }}>
-              <div style={{ fontWeight: 600, fontSize: '0.8rem', color: 'var(--google-blue)', textTransform: 'uppercase', marginBottom: '4px' }}>
+            <div key={key} className="metric-card">
+              <div className="metric-label">
                 {key.replace(/_/g, ' ')}
               </div>
-              <div style={{ fontSize: '0.95rem' }}>
+              <div className="metric-value">
                 {renderMetricValue(key, value)}
               </div>
             </div>
@@ -109,10 +105,10 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
 
       {data.trends && data.trends.length > 0 && (
         <div>
-          <h4 style={{ margin: '0 0 8px 0', fontSize: '0.9rem', color: 'var(--google-gray)' }}>Trends</h4>
-          <ul style={{ margin: 0, paddingLeft: '20px', fontSize: '0.9rem' }}>
+          <h4 className="section-title">Trends</h4>
+          <ul className="trends-list">
             {data.trends.map((trend, i) => (
-              <li key={i} style={{ marginBottom: '4px' }}>{trend}</li>
+              <li key={i} className="trend-item">{trend}</li>
             ))}
           </ul>
         </div>

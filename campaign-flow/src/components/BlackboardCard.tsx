@@ -1,5 +1,6 @@
 import React from 'react';
 import { LucideIcon } from 'lucide-react';
+import '../styles/BlackboardCard.css';
 
 interface BlackboardCardProps {
   title: string;
@@ -13,23 +14,23 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
   return (
     <div className="card">
       <div className="card-header">
-        <div style={{ 
-          padding: '8px', 
-          borderRadius: '12px', 
-          backgroundColor: `${color}15`,
-          color: color
-        }}>
+        <div 
+          className="card-header-icon"
+          style={{ 
+            backgroundColor: `${color}15`,
+            color: color
+          }}
+        >
           <Icon size={24} />
         </div>
         <span className="card-title">{title}</span>
         {!isEmpty && (
-          <div style={{ 
-            marginLeft: 'auto', 
-            width: '8px', 
-            height: '8px', 
-            borderRadius: '50%', 
-            backgroundColor: color 
-          }} />
+          <div 
+            className="status-indicator"
+            style={{ 
+              backgroundColor: color 
+            }} 
+          />
         )}
       </div>
       <div className="card-content">

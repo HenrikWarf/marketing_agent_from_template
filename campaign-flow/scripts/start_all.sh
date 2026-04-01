@@ -1,8 +1,14 @@
 #!/bin/bash
 
+# CampaignFlow Unified Startup Script
+# This script starts the ADK Agent Backend, the FastAPI Proxy, and the React UI.
+
+# Navigate to the project root (one level up from campaign-flow/scripts)
+cd "$(dirname "$0")/../../"
+
 # Function to handle cleanup on exit
 cleanup() {
-    echo "Shutting down..."
+    echo "Shutting down CampaignFlow..."
     kill $ADK_PID 2>/dev/null
     kill $BACKEND_PID 2>/dev/null
     kill $FRONTEND_PID 2>/dev/null

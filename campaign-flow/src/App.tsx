@@ -6,6 +6,7 @@ import AnalysisPanel from './components/AnalysisPanel';
 import SegmentationPanel from './components/SegmentationPanel';
 import ContentPanel from './components/ContentPanel';
 import ReviewPanel from './components/ReviewPanel';
+import './styles/Dashboard.css';
 import { 
   BarChart3, 
   Users, 
@@ -122,25 +123,14 @@ const App: React.FC = () => {
         </aside>
         
         <main className="main-content">
-          <header style={{ 
-            display: 'flex', 
-            justifyContent: 'space-between', 
-            alignItems: 'center',
-            marginBottom: '8px'
-          }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <header className="dashboard-header">
+            <div className="header-controls">
+              <div className="control-group">
                 <Globe size={18} color="var(--google-gray)" />
                 <select 
+                  className="selector-transparent"
                   value={currentEnv} 
                   onChange={(e) => setCurrentEnv(e.target.value)}
-                  style={{ 
-                    border: 'none', 
-                    background: 'none', 
-                    fontWeight: 500, 
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
                 >
                   {environments.length > 0 ? (
                     environments.map(e => <option key={e.id} value={e.id}>{e.name}</option>)
@@ -150,18 +140,12 @@ const App: React.FC = () => {
                 </select>
               </div>
               
-              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+              <div className="control-group">
                 <Bot size={18} color="var(--google-gray)" />
                 <select 
+                  className="selector-transparent"
                   value={currentAgent} 
                   onChange={(e) => setCurrentAgent(e.target.value)}
-                  style={{ 
-                    border: 'none', 
-                    background: 'none', 
-                    fontWeight: 500, 
-                    cursor: 'pointer',
-                    fontSize: '0.9rem'
-                  }}
                 >
                   {agents.length > 0 ? (
                     agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)
@@ -172,22 +156,11 @@ const App: React.FC = () => {
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '12px' }}>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--google-gray)' }}>
+            <div className="header-actions">
+              <button className="icon-button">
                 <Settings size={20} />
               </button>
-              <div style={{ 
-                width: '32px', 
-                height: '32px', 
-                borderRadius: '50%', 
-                background: 'var(--google-blue)', 
-                color: 'white',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                fontSize: '0.8rem',
-                fontWeight: 700
-              }}>
+              <div className="user-avatar">
                 HW
               </div>
             </div>
