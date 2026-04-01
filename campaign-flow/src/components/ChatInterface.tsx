@@ -57,7 +57,7 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   const [input, setInput] = useState('');
   const { messages, isStreaming, currentAgent, activeTool, agentHistory, sendMessage } = useChatStream();
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -67,18 +67,32 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
     scrollToBottom();
   }, [messages, activeTool, isStreaming, agentHistory]);
 
-  // Maintain focus on input field
+  // Maintain focus and auto-expand height
   useEffect(() => {
     if (!isStreaming) {
-      inputRef.current?.focus();
+      textareaRef.current?.focus();
     }
   }, [isStreaming]);
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.height = 'auto';
+      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
+    }
+  }, [input]);
 
   const handleSend = () => {
     if (!input.trim() || isStreaming) return;
     const text = input;
     setInput('');
     sendMessage(text, currentEnv, agentId, sessionId, onDataReceived);
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      handleSend();
+    }
   };
 
   const getAgentDisplay = (id?: string | null) => {
@@ -145,12 +159,12 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
 
       <div className="chat-input-area">
         <div className="input-pill">
-          <input 
-            ref={inputRef}
-            type="text"
+          <textarea 
+            ref={textareaRef}
+            rows={1}
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+            onKeyDown={handleKeyDown}
             placeholder="Talk to your marketing team..."
             className="chat-input"
             disabled={isStreaming}

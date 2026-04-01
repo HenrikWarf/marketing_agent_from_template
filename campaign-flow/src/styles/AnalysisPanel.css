@@ -1,32 +1,42 @@
 .analysis-container {
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 24px;
 }
 
 .section-title {
-  margin: 0 0 8px 0;
+  margin: 0 0 12px 0;
   font-size: 0.9rem;
   color: var(--google-gray);
+  font-weight: 500;
 }
 
 .summary-text {
   margin: 0;
   font-size: 0.95rem;
-  line-height: 1.5;
+  line-height: 1.6;
+  color: var(--text-primary);
 }
 
 .metrics-list {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 16px;
 }
 
 .metric-card {
-  background: #f8f9fa;
-  padding: 12px;
+  background: #ffffff;
+  padding: 16px;
   border-radius: 12px;
-  border: 1px solid #eee;
+  border: 1px solid #e0e2e6;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.02);
+}
+
+.metric-header-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
 }
 
 .metric-label {
@@ -34,10 +44,40 @@
   font-size: 0.8rem;
   color: var(--google-blue);
   text-transform: uppercase;
-  margin-bottom: 4px;
+  letter-spacing: 0.02em;
 }
 
-.metric-value {
+.metric-toggles {
+  display: flex;
+  background: #f1f3f4;
+  padding: 2px;
+  border-radius: 8px;
+  gap: 2px;
+}
+
+.toggle-btn {
+  background: none;
+  border: none;
+  padding: 4px 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  color: var(--google-gray);
+  display: flex;
+  align-items: center;
+  transition: all 0.2s;
+}
+
+.toggle-btn:hover {
+  background-color: rgba(0,0,0,0.05);
+}
+
+.toggle-btn.active {
+  background: white;
+  color: var(--google-blue);
+  box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+}
+
+.metric-value-container {
   font-size: 0.95rem;
 }
 
@@ -55,35 +95,43 @@
 
 .data-table thead tr {
   text-align: left;
-  border-bottom: 2px solid #eee;
+  border-bottom: 2px solid #f1f3f4;
 }
 
 .data-table th {
-  padding: 6px 8px;
-  text-transform: capitalize;
+  padding: 8px;
+  color: var(--google-gray);
+  font-weight: 500;
 }
 
 .data-table td {
-  padding: 6px 8px;
-}
-
-.data-table tbody tr {
-  border-bottom: 1px solid #f0f0f0;
+  padding: 8px;
+  border-bottom: 1px solid #f8f9fa;
 }
 
 .simple-metric-tag {
-  background: #f1f3f4;
-  padding: 2px 8px;
-  border-radius: 4px;
+  background: #e8f0fe;
+  color: #174ea6;
+  padding: 4px 10px;
+  border-radius: 6px;
   font-size: 0.8rem;
+  font-weight: 500;
 }
 
 .trends-list {
   margin: 0;
   padding-left: 20px;
-  font-size: 0.9rem;
+  font-size: 0.95rem;
+  line-height: 1.6;
 }
 
 .trend-item {
-  margin-bottom: 4px;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.primitive-value {
+  font-size: 1.25rem;
+  font-weight: 500;
+  color: var(--text-primary);
 }

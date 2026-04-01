@@ -17,9 +17,6 @@ const PlaceholderCard: React.FC<PlaceholderCardProps> = ({ title, icon: Icon, co
       </div>
       <h3>{title}</h3>
       <p>{message}</p>
-      <div className="loading-bar-container">
-        <div className="loading-bar-fill" style={{ backgroundColor: color }}></div>
-      </div>
     </div>
   );
 };
