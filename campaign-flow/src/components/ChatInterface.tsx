@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Send, Plus, RefreshCw } from 'lucide-react';
+import { Send, Plus, RefreshCw, PenTool } from 'lucide-react';
 import { useChatStream } from '../hooks/useChatStream';
 import '../styles/ChatInterface.css';
 
@@ -60,7 +60,20 @@ const ChatInterface: React.FC<ChatInterfaceProps> = ({
   return (
     <div className="chat-container">
       <header className="chat-header">
-        <span className="chat-title">CampaignFlow</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <div style={{ 
+            backgroundColor: 'var(--google-blue)', 
+            color: 'white', 
+            borderRadius: '8px', 
+            padding: '6px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center'
+          }}>
+            <PenTool size={18} />
+          </div>
+          <span className="chat-title">CampaignFlow</span>
+        </div>
         <button 
           onClick={onNewSession}
           className="new-chat-button"

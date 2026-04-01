@@ -23,7 +23,7 @@ const Dashboard: React.FC<{ env: string, agentId: string, sessionId: string }> =
   return (
     <div className="dashboard-grid">
       <BlackboardCard 
-        title="1. Data Analysis" 
+        title="Data Analysis" 
         icon={BarChart3} 
         color="var(--analysis-color)"
         isEmpty={!state.analysis_data}
@@ -32,7 +32,7 @@ const Dashboard: React.FC<{ env: string, agentId: string, sessionId: string }> =
       </BlackboardCard>
 
       <BlackboardCard 
-        title="2. Segmentation" 
+        title="Segmentation" 
         icon={Users} 
         color="var(--segment-color)"
         isEmpty={!state.segments_data}
@@ -41,7 +41,7 @@ const Dashboard: React.FC<{ env: string, agentId: string, sessionId: string }> =
       </BlackboardCard>
 
       <BlackboardCard 
-        title="3. Content Creation" 
+        title="Content Creation" 
         icon={PenTool} 
         color="var(--content-color)"
         isEmpty={!state.content_data}
@@ -50,7 +50,7 @@ const Dashboard: React.FC<{ env: string, agentId: string, sessionId: string }> =
       </BlackboardCard>
 
       <BlackboardCard 
-        title="4. Brand Review" 
+        title="Brand Review" 
         icon={ShieldCheck} 
         color="var(--review-color)"
         isEmpty={!state.review_data}
