@@ -29,8 +29,37 @@
 
 .header-actions {
   display: flex;
-  gap: 12px;
+  gap: 8px;
   align-items: center;
+}
+
+.activate-button {
+  background-color: #1e8e3e; /* Google Green */
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 100px;
+  font-weight: 500;
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  transition: background-color 0.2s, box-shadow 0.2s;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+  margin-right: 8px;
+}
+
+.activate-button:hover {
+  background-color: #1b7e37;
+  box-shadow: 0 2px 6px rgba(30, 142, 62, 0.3);
+}
+
+.action-divider {
+  width: 1px;
+  height: 24px;
+  background-color: var(--border-color);
+  margin: 0 8px;
 }
 
 .icon-button {

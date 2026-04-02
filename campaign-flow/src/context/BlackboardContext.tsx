@@ -33,6 +33,7 @@ export interface Segment {
   name: string;
   description: string;
   count: number;
+  sql?: string; // The BigQuery logic used to identify this segment
 }
 
 export interface SegmentationData {

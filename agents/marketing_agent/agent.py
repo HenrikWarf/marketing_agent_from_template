@@ -71,7 +71,7 @@ class AnalysisResult(BaseModel):
 
 class SegmentationResult(BaseModel):
     """Result of the customer segmentation phase."""
-    segments: List[Dict[str, Any]] = Field(description="List of segments with name, description, and count")
+    segments: List[Dict[str, Any]] = Field(description="List of segments with name, description, count, and the actual sql query used")
     logic_reasoning: str = Field(description="Reasoning behind these segment definitions")
 
 class ContentResult(BaseModel):
@@ -114,8 +114,7 @@ analysis_agent = Agent(
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to AnalysisResult schema and terminate.
-    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
-    """,
+    CRITICAL: JSON ONLY.""",
     tools=data_tools,
     output_schema=AnalysisResult,
     output_key="analysis_data",
@@ -143,7 +142,10 @@ opportunity_analyst = Agent(
     
     Marketing Schema: {MARKETING_SCHEMA}""",
     tools=data_tools,
-    output_key="opportunity_findings"
+    output_key="opportunity_findings",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Identifies business opportunities from raw data patterns."
 )
 
 campaign_recommender = Agent(
@@ -154,7 +156,10 @@ campaign_recommender = Agent(
     Format your final output strictly according to the RecommendationResult schema and terminate.
     CRITICAL: JSON ONLY.""",
     output_schema=RecommendationResult,
-    output_key="recommendations_data"
+    output_key="recommendations_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Suggests three creative campaign ideas based on identified opportunities."
 )
 
 recommendation_pipeline = SequentialAgent(
@@ -178,8 +183,7 @@ campaign_architect = Agent(
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to BriefResult schema and terminate.
-    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
-    """,
+    CRITICAL: JSON ONLY.""",
     tools=data_tools,
     output_schema=BriefResult,
     output_key="brief_data",
@@ -197,7 +201,7 @@ segmentation_agent = Agent(
     REQUIRED WORKFLOW:
     1. READ THE BRIEF: Identify the target audience (e.g., high churn risk, high CLV).
     2. QUERY DATA: You MUST run at least one SQL query on `{PROJECT_ID}.{DATASET_ID}.customer` to find the distribution of these users.
-    3. POPULATE SEGMENTS: For each group you find (e.g., by 'favorite_category'), create a segment object with a 'name', 'description', and the ACTUAL 'count' from your query.
+    3. POPULATE SEGMENTS: For each group you find (e.g., by 'favorite_category'), create a segment object with a 'name', 'description', the ACTUAL 'count' from your query, and the actual 'sql' you used.
     4. SCHEMA: Your final output must strictly follow the SegmentationResult schema.
     
     Marketing Schema: {MARKETING_SCHEMA}
@@ -229,8 +233,7 @@ content_agent = Agent(
     Tone: Engaging, enthusiastic, and quirky.
     
     EXIT CONDITION: Format strictly according to ContentResult schema and terminate.
-    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
-    """,
+    CRITICAL: JSON ONLY.""",
     output_schema=ContentResult,
     output_key="content_data",
     disallow_transfer_to_peers=True,
@@ -247,8 +250,7 @@ reviewer_agent = Agent(
     Review content_data for brand consistency and compliance.
     
     EXIT CONDITION: Format strictly according to ReviewResult schema and terminate.
-    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
-    """,
+    CRITICAL: JSON ONLY.""",
     output_schema=ReviewResult,
     output_key="review_data",
     disallow_transfer_to_peers=True,

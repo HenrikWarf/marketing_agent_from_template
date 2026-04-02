@@ -1,5 +1,7 @@
 import os
 import json
+import sqlite3
+import uuid
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -94,6 +96,63 @@ async def get_customer_schema():
             return {"schema": json.load(f)}
     except Exception as e:
         print(f"Error reading schema: {e}")
+        return {"error": str(e)}
+
+@app.post("/api/activate")
+async def activate_campaign(request: Request):
+    """Save an approved campaign configuration to the local database."""
+    try:
+        body = await request.json()
+        campaign_id = str(uuid.uuid4())[:8]
+        
+        conn = sqlite3.connect('campaigns.db')
+        c = conn.cursor()
+        c.execute(
+            "INSERT INTO campaigns (id, name, strategy_json, segments_json, content_json) VALUES (?, ?, ?, ?, ?)",
+            (
+                campaign_id,
+                body.get("name", "Unnamed Campaign"),
+                json.dumps(body.get("strategy", {})),
+                json.dumps(body.get("segments", [])),
+                json.dumps(body.get("content", {}))
+            )
+        )
+        conn.commit()
+        conn.close()
+        
+        # Return success with deployment URL
+        return {
+            "status": "success", 
+            "campaign_id": campaign_id, 
+            "url": f"http://localhost:3000/api/activated-campaigns/{campaign_id}"
+        }
+    except Exception as e:
+        print(f"Activation Error: {e}")
+        return {"status": "error", "message": str(e)}
+
+@app.get("/api/activated-campaigns/{campaign_id}")
+async def get_activated_campaign(campaign_id: str):
+    """Public API to fetch campaign material for downstream activation tools."""
+    try:
+        conn = sqlite3.connect('campaigns.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
+        row = c.fetchone()
+        conn.close()
+        
+        if not row:
+            return {"error": "Campaign not found"}
+            
+        return {
+            "id": row["id"],
+            "name": row["name"],
+            "activated_at": row["created_at"],
+            "strategy": json.loads(row["strategy_json"]),
+            "segments": json.loads(row["segments_json"]),
+            "content": json.loads(row["content_json"])
+        }
+    except Exception as e:
         return {"error": str(e)}
 
 @app.post("/api/sessions")
