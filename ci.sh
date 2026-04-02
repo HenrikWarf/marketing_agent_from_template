@@ -1,13 +1,13 @@
 #!/bin/bash
 set -e
 
-echo "--- RUNNING LINTING (RUFF) ---"
-uv run ruff check .
+echo "--- RUNNING DATA CONTRACT VALIDATION ---"
+make validate-contract
 
-echo "--- RUNNING TESTS (PYTEST) ---"
-uv run pytest
+echo "--- RUNNING LINTING (AGENT + APP) ---"
+make lint
 
-echo "--- RUNNING BEHAVIORAL EVALS (ADK EVAL) ---"
-make eval
+echo "--- RUNNING TESTS (AGENT + APP) ---"
+make test
 
 echo "--- ALL CHECKS PASSED ---"
