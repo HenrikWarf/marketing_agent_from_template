@@ -3,6 +3,7 @@ os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from google.adk import Agent
+from google.adk.agents import SequentialAgent
 from agents.shared.plugins import BigQueryReflectRetryPlugin
 from agents.shared.tools import bq_mcp_toolset
 from agents.marketing_agent.company_context import COMPANY_CONTEXT
@@ -108,8 +109,7 @@ analysis_agent = Agent(
     
     CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     
-    EXIT CONDITION: Once you have gathered sufficient insights, format your final output strictly according to the AnalysisResult schema and terminate.
-    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    EXIT CONDITION: Once you have gathered sufficient insights, format your final output strictly according to the AnalysisResult schema and terminate. DO NOT suggest next steps or try to transfer to other agents.
     """,
     tools=data_tools,
     output_schema=AnalysisResult,
@@ -135,6 +135,7 @@ campaign_architect = Agent(
     
     Here is the marketing schema context:
     {MARKETING_SCHEMA}
+    
     EXIT CONDITION: Once the strategy is defined, format your final output strictly according to the BriefResult schema and terminate.
     CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
     """,
@@ -144,7 +145,7 @@ campaign_architect = Agent(
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
     description="Defines the campaign strategy, goals, and business opportunities."
-    )
+)
 
 # 3. Segmentation Agent - Segments customers based on analysis and strategy
 segmentation_agent = Agent(
@@ -215,7 +216,14 @@ reviewer_agent = Agent(
     description="Reviews marketing content against company brand guidelines."
 )
 
-# 6. Marketing Manager - The entry point for the user
+# 6. Content Pipeline - Sequential flow for Drafting -> Reviewing
+content_pipeline = SequentialAgent(
+    name="content_pipeline",
+    sub_agents=[content_agent, reviewer_agent],
+    description="Automated sequential pipeline that generates marketing content and then performs a brand review."
+)
+
+# 7. Marketing Manager - The entry point for the user
 root_agent = Agent(
     name="marketing_manager",
     model=MODEL_NAME,
@@ -228,20 +236,19 @@ root_agent = Agent(
     MANAGEMENT RULES:
     1. CONVERSATIONAL: For simple greetings (Hello, Hi) or non-marketing chat, respond yourself using our quirky brand voice. 
     2. HUB-AND-SPOKE: Sub-agents return ONLY structured JSON. You are the only one who talks to the human.
-    3. PROACTIVE: When a sub-agent completes a task, ALWAYS acknowledge it to the user in a friendly way and suggest the next logical step (e.g. "The strategy is ready! Shall we move to customer segmentation?").
+    3. PROACTIVE: When a sub-agent completes a task, ALWAYS acknowledge it to the user in a friendly way and suggest the next logical step.
     
     WORKFLOW:
-    - User Request -> Analysis (if needed) -> Campaign Brief (Architect) -> Segmentation -> Content Creation -> Brand Review.
+    - User Request -> Analysis (if needed) -> Campaign Brief (Architect) -> Segmentation -> Content Pipeline (Draft + Review).
     - If `analysis_data` is present but no `brief_data` -> Transfer to 'campaign_architect' to turn insights into strategy.
     - If `brief_data` is present but no `segments_data` -> Transfer to 'segmentation_agent'.
-    - If `segments_data` is present but no `content_data` -> Transfer to 'content_agent'.
-    - If `content_data` is present -> Transfer to 'reviewer_agent'.
-    - If reviewer rejects -> Transfer back to 'content_agent' with feedback.
-    - If reviewer verifies -> Present the final verified content to the user and conclude.
+    - If `segments_data` is present but `content_data` is missing -> Transfer to 'content_pipeline'.
+    - If `review_data.status` is 'REJECTED' -> Transfer back to 'content_pipeline' to fix and re-review.
+    - If `review_data.status` is 'VERIFIED' -> Present the final verified content to the user and conclude.
     
     You are the only agent that speaks directly to the end-user.
     """,
-    sub_agents=[analysis_agent, segmentation_agent, content_agent, reviewer_agent, campaign_architect],
+    sub_agents=[analysis_agent, segmentation_agent, content_pipeline, campaign_architect],
     disallow_transfer_to_peers=False,
     disallow_transfer_to_parent=False,
     description="The main orchestrator for marketing campaigns at Crazy Furnishing Company."

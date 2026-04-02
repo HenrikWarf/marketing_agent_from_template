@@ -25,7 +25,7 @@ import {
   ClipboardList
 } from 'lucide-react';
 
-type ViewType = 'brief' | 'analysis' | 'segmentation' | 'content' | 'review' | 'grid';
+type ViewType = 'brief' | 'analysis' | 'segmentation' | 'content' | 'grid';
 
 const Dashboard: React.FC = () => {
   const { state } = useBlackboard();
@@ -36,8 +36,7 @@ const Dashboard: React.FC = () => {
     brief: null,
     analysis: null,
     segmentation: null,
-    content: null,
-    review: null
+    content: null
   });
 
   useEffect(() => {
@@ -55,15 +54,19 @@ const Dashboard: React.FC = () => {
     checkUpdate('analysis_data', 'analysis');
     checkUpdate('segments_data', 'segmentation');
     checkUpdate('content_data', 'content');
-    checkUpdate('review_data', 'review');
+    // Also trigger on review data to show the unified view
+    if (state.review_data && JSON.stringify(state.review_data) !== seenDataRef.current['content_review']) {
+        seenDataRef.current['content_review'] = JSON.stringify(state.review_data);
+        setActiveView('content');
+        setIsGridView(false);
+    }
   }, [state]);
 
   const VIEWS = [
     { id: 'brief', title: 'Campaign Brief', icon: ClipboardList, color: '#1a73e8', data: state.brief_data, panel: BriefPanel, msg: "Start by defining your campaign strategy and goals." },
     { id: 'analysis', title: 'Data Analysis', icon: BarChart3, color: 'var(--analysis-color)', data: state.analysis_data, panel: AnalysisPanel, msg: "Connect to BigQuery to begin your marketing analysis." },
     { id: 'segmentation', title: 'Segmentation', icon: Users, color: 'var(--segment-color)', data: state.segments_data, panel: SegmentationPanel, msg: "Identify target audience segments based on data insights." },
-    { id: 'content', title: 'Content Creation', icon: PenTool, color: 'var(--content-color)', data: state.content_data, panel: ContentPanel, msg: "Generate personalized marketing copy for your segments." },
-    { id: 'review', title: 'Brand Review', icon: ShieldCheck, color: 'var(--review-color)', data: state.review_data, panel: ReviewPanel, msg: "Ensure all content aligns with brand and compliance guidelines." },
+    { id: 'content', title: 'Content & Review', icon: PenTool, color: 'var(--content-color)', data: state.content_data || state.review_data, msg: "Draft and review your personalized marketing content." },
   ];
 
   const toggleGrid = () => setIsGridView(!isGridView);
@@ -107,13 +110,37 @@ const Dashboard: React.FC = () => {
                 color={view.color}
                 isEmpty={!view.data}
               >
-                {view.data ? <view.panel data={view.data as any} /> : <div style={{padding: '20px', textAlign: 'center', opacity: 0.5}}><Sparkles size={24} /></div>}
+                {view.id === 'content' ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                        {state.content_data && <ContentPanel data={state.content_data} />}
+                        {state.review_data && <ReviewPanel data={state.review_data} />}
+                    </div>
+                ) : (
+                    view.data ? <view.panel data={view.data as any} /> : <div style={{padding: '20px', textAlign: 'center', opacity: 0.5}}><Sparkles size={24} /></div>
+                )}
               </BlackboardCard>
             ))}
+            {/* If not in VIEWS grid but has data, show it (e.g. Review in grid) */}
+            {!isGridView && <BlackboardCard title="Review" icon={ShieldCheck} color="var(--review-color)" isEmpty={!state.review_data}>
+                {state.review_data && <ReviewPanel data={state.review_data} />}
+            </BlackboardCard>}
           </div>
         ) : (
           <div className="view-transition-container" key={activeView}>
-            {VIEWS.find(v => v.id === activeView)?.data ? (
+            {activeView === 'content' ? (
+                (state.content_data || state.review_data) ? (
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '24px' }}>
+                        <BlackboardCard title="Content Drafts" icon={PenTool} color="var(--content-color)" isEmpty={!state.content_data}>
+                            {state.content_data && <ContentPanel data={state.content_data} />}
+                        </BlackboardCard>
+                        <BlackboardCard title="Brand Review" icon={ShieldCheck} color="var(--review-color)" isEmpty={!state.review_data}>
+                            {state.review_data && <ReviewPanel data={state.review_data} />}
+                        </BlackboardCard>
+                    </div>
+                ) : (
+                    <PlaceholderCard title="Content & Review" icon={PenTool} color="var(--content-color)" message="Draft and review your personalized marketing content." />
+                )
+            ) : VIEWS.find(v => v.id === activeView)?.data ? (
               (() => {
                 const view = VIEWS.find(v => v.id === activeView)!;
                 return (
@@ -154,7 +181,6 @@ const App: React.FC = () => {
   const [currentAgent, setCurrentAgent] = useState('');
   const [sessionId, setSessionId] = useState('');
 
-  // Modals state
   const [isSettingsOpen, setIsSettingsOpen] = useState(false);
   const [isDataOpen, setIsDataOpen] = useState(false);
   const [companyContext, setCompanyContext] = useState('');
@@ -171,27 +197,15 @@ const App: React.FC = () => {
         }
       });
 
-    // Prefetch static data safely
-    fetch('/api/context')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => data && setCompanyContext(data.content || ''))
-      .catch(() => {});
-
-    fetch('/api/guidelines')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => data && setBrandGuidelines(data.content || ''))
-      .catch(() => {});
-
-    fetch('/api/schema')
-      .then(res => res.ok ? res.json() : null)
-      .then(data => data && setCustomerSchema(data.schema || []))
-      .catch(() => {});
+    fetch('/api/context').then(res => res.ok ? res.json() : null).then(data => data && setCompanyContext(data.content || '')).catch(() => {});
+    fetch('/api/guidelines').then(res => res.ok ? res.json() : null).then(data => data && setBrandGuidelines(data.content || '')).catch(() => {});
+    fetch('/api/schema').then(res => res.ok ? res.json() : null).then(data => data && setCustomerSchema(data.schema || [])).catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!currentEnv) return;
-    setAgents([]); // Clear agents while loading
-    setCurrentAgent(''); // Reset current agent
+    setAgents([]); 
+    setCurrentAgent(''); 
     
     fetch(`/api/agents?env=${currentEnv}`)
       .then(res => res.ok ? res.json() : null)
@@ -207,11 +221,7 @@ const App: React.FC = () => {
   }, [currentEnv]);
 
   const handleNewSession = async () => {
-    if (!currentAgent) {
-      console.warn("UI: No agent selected, skipping session creation.");
-      return;
-    }
-    
+    if (!currentAgent) return;
     try {
       const res = await fetch(`/api/sessions?env=${currentEnv}`, {
         method: 'POST',
@@ -294,66 +304,28 @@ const App: React.FC = () => {
           <Dashboard />
         </main>
 
-        <Modal 
-          isOpen={isSettingsOpen} 
-          onClose={() => setIsSettingsOpen(false)} 
-          title="Brand Settings & Context"
-          icon={<Settings size={20} />}
-        >
+        <Modal isOpen={isSettingsOpen} onClose={() => setIsSettingsOpen(false)} title="Brand Settings & Context" icon={<Settings size={20} />}>
           <div className="modal-section">
             <h3>Company Profile</h3>
-            <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
-              <ReactMarkdown>{companyContext}</ReactMarkdown>
-            </div>
+            <div className="markdown-body" style={{ fontSize: '0.9rem' }}><ReactMarkdown>{companyContext}</ReactMarkdown></div>
           </div>
           <div className="modal-section">
             <h3>Brand Guidelines</h3>
-            <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
-              <ReactMarkdown>{brandGuidelines}</ReactMarkdown>
-            </div>
+            <div className="markdown-body" style={{ fontSize: '0.9rem' }}><ReactMarkdown>{brandGuidelines}</ReactMarkdown></div>
           </div>
         </Modal>
 
-        <Modal 
-          isOpen={isDataOpen} 
-          onClose={() => setIsDataOpen(false)} 
-          title="Data Reference (BigQuery)"
-          icon={<Database size={20} />}
-        >
+        <Modal isOpen={isDataOpen} onClose={() => setIsDataOpen(false)} title="Data Reference (BigQuery)" icon={<Database size={20} />}>
           <div className="modal-section">
             <h3>Marketing Data Schema</h3>
-            <p style={{ fontSize: '0.85rem', color: 'var(--google-gray)', marginBottom: '16px' }}>
-              The Crazy Furnishing Company dataset includes customer, product, and sales history.
-            </p>
             <table className="schema-table">
-              <thead>
-                <tr>
-                  <th>Table</th>
-                  <th>Column</th>
-                  <th>Type</th>
-                  <th>Description</th>
-                </tr>
-              </thead>
+              <thead><tr><th>Table</th><th>Column</th><th>Type</th><th>Description</th></tr></thead>
               <tbody>
                 {customerSchema && (Array.isArray(customerSchema) ? (
-                  customerSchema.map(col => (
-                    <tr key={col.name}>
-                      <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>customer</td>
-                      <td style={{ fontWeight: 500 }}>{col.name}</td>
-                      <td><span className="type-tag">{col.type}</span></td>
-                      <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
-                    </tr>
-                  ))
+                  customerSchema.map(col => (<tr key={col.name}><td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>customer</td><td style={{ fontWeight: 500 }}>{col.name}</td><td><span className="type-tag">{col.type}</span></td><td style={{ color: 'var(--google-gray)' }}>{col.description}</td></tr>))
                 ) : (
                   Object.entries(customerSchema).map(([tableName, columns]) => (
-                    Array.isArray(columns) && columns.map(col => (
-                      <tr key={`${tableName}-${col.name}`}>
-                        <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>{tableName}</td>
-                        <td style={{ fontWeight: 500 }}>{col.name}</td>
-                        <td><span className="type-tag">{col.type}</span></td>
-                        <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
-                      </tr>
-                    ))
+                    Array.isArray(columns) && columns.map(col => (<tr key={`${tableName}-${col.name}`}><td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>{tableName}</td><td style={{ fontWeight: 500 }}>{col.name}</td><td><span className="type-tag">{col.type}</span></td><td style={{ color: 'var(--google-gray)' }}>{col.description}</td></tr>))
                   ))
                 ))}
               </tbody>

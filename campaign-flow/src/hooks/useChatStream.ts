@@ -75,29 +75,36 @@ export const useChatStream = () => {
       let fullText = '';
       let lastKnownAgent = agentId;
 
-      if (!reader) return;
-
       const processJsonInText = (text: string) => {
-        const trimmed = text.trim();
-        const jsonMatch = trimmed.match(/\{[\s\S]*\}/);
-        if (!jsonMatch) return { isMatch: false, content: text };
+        // Find ALL JSON objects in the text (SequentialAgent might output multiple)
+        const jsonMatches = text.match(/\{[\s\S]*?\}(?=\s*\{|\s*$)/g) || [];
+        let cleanDisplay = text;
+        let matchedSomething = false;
 
-        try {
-          const potentialJson = jsonMatch[0];
-          const parsed = JSON.parse(potentialJson);
-          const dataKeys = ['campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
-          
-          if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
-            if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
-            else if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
-            else if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
-            else if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
-            else if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('review'); }
+        for (const match of jsonMatches) {
+          try {
+            const parsed = JSON.parse(match);
+            const dataKeys = ['campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
             
-            return { isMatch: true, content: "_Structured data updated. See dashboard for details._" };
-          }
-        } catch (e) {}
-        return { isMatch: false, content: text };
+            if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
+              matchedSomething = true;
+              console.log("HOOK: Detected JSON in stream", parsed);
+              
+              if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
+              if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
+              if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
+              if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
+              if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('content'); }
+              
+              cleanDisplay = cleanDisplay.replace(match, '').trim();
+            }
+          } catch (e) {}
+        }
+
+        if (matchedSomething && (!cleanDisplay || cleanDisplay === ".")) {
+          return { isMatch: true, content: "_Structured data updated. See dashboard for details._" };
+        }
+        return { isMatch: matchedSomething, content: cleanDisplay };
       };
 
       while (true) {
@@ -115,52 +122,34 @@ export const useChatStream = () => {
 
               const data: ChatEvent = JSON.parse(rawData);
 
-              // 1. Handle Metadata (Agent Name, Tools)
               const agentName = data.author || data.agent_name;
               if (agentName && agentName !== lastKnownAgent) {
                 lastKnownAgent = agentName;
                 setCurrentAgent(agentName);
                 setAgentHistory(prev => {
                   const next = prev.map(s => ({ ...s, active: false }));
-                  return [...next, { 
-                    id: agentName, 
-                    name: agentName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), 
-                    active: true 
-                  }];
+                  return [...next, { id: agentName, name: agentName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()), active: true }];
                 });
               }
-
-              const updateActiveTool = (statusText: string) => {
-                setActiveTool(statusText);
-                setAgentHistory(prev => {
-                  if (prev.length === 0) return prev;
-                  const next = [...prev];
-                  next[next.length - 1].status = statusText;
-                  return next;
-                });
-              };
 
               if (data.actions && Array.isArray(data.actions)) {
                 const lastAction = data.actions[data.actions.length - 1];
-                if (lastAction.tool_call) updateActiveTool(`Executing ${lastAction.tool_call.name}...`);
-                if (lastAction.tool_response) updateActiveTool(`Finished ${lastAction.tool_response.name}`);
+                if (lastAction.tool_call) setActiveTool(`Executing ${lastAction.tool_call.name}...`);
+                if (lastAction.tool_response) setActiveTool(`Finished ${lastAction.tool_response.name}`);
               }
 
-              // 2. Blackboard State
               if (data.session_state) {
                 updateState(data.session_state);
                 if (data.session_state.brief_data) onDataReceived?.('brief');
                 if (data.session_state.analysis_data) onDataReceived?.('analysis');
                 if (data.session_state.segments_data) onDataReceived?.('segmentation');
                 if (data.session_state.content_data) onDataReceived?.('content');
-                if (data.session_state.review_data) onDataReceived?.('review');
+                if (data.session_state.review_data) onDataReceived?.('content');
               }
 
-              // 3. Handle streaming content
               if (data.content && data.content.parts) {
                 const chunkText = data.content.parts.map(p => p.text || '').join('');
                 if (chunkText) {
-                  // DEDUPLICATION STRATEGY
                   if (chunkText.startsWith(fullText)) {
                     fullText = chunkText;
                   } else if (!fullText.endsWith(chunkText)) {
@@ -177,11 +166,7 @@ export const useChatStream = () => {
                   setMessages(prev => {
                     const next = [...prev];
                     const lastIdx = next.length - 1;
-                    next[lastIdx] = { 
-                      ...next[lastIdx],
-                      parts: [{ text: finalDisplay }],
-                      agentId: lastKnownAgent
-                    };
+                    next[lastIdx] = { ...next[lastIdx], parts: [{ text: finalDisplay }], agentId: lastKnownAgent };
                     return next;
                   });
                 }
@@ -195,7 +180,7 @@ export const useChatStream = () => {
       if (isMatch) {
         setMessages(prev => {
           const next = [...prev];
-          next[next.length - 1].parts = [{ text: "_Structured data updated. See dashboard for details._" }];
+          next[next.length - 1].parts = [{ text: "_Structured data updated._" }];
           return next;
         });
       }
