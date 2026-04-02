@@ -47,8 +47,8 @@ class RecommendationResult(BaseModel):
     """Result of the campaign recommendation phase."""
     recommendations: List[CampaignIdea] = Field(
         description="Exactly three unique campaign recommendations based on data insights",
-        min_items=3,
-        max_items=3
+        min_length=3,
+        max_length=3
     )
 
 class BriefResult(BaseModel):
@@ -74,9 +74,15 @@ class SegmentationResult(BaseModel):
     segments: List[Dict[str, Any]] = Field(description="List of segments with name, description, count, and the actual sql query used")
     logic_reasoning: str = Field(description="Reasoning behind these segment definitions")
 
+class ContentDraft(BaseModel):
+    """A single marketing draft for a specific channel."""
+    channel: str = Field(description="The platform (e.g. Email, Instagram, TikTok)")
+    subject: str = Field(default="", description="The subject line or hook")
+    text_content: str = Field(description="The main text, body, or post content of the message")
+
 class ContentResult(BaseModel):
     """Result of the marketing content creation phase."""
-    content_drafts: List[Dict[str, Any]] = Field(description="Drafts for different channels")
+    content_drafts: List[ContentDraft] = Field(description="List of standardized drafts")
     target_segment: str = Field(description="The specific segment this content is for")
     call_to_action: str = Field(description="The primary action we want users to take")
 
@@ -235,6 +241,10 @@ content_agent = Agent(
     instruction=f"""{BRAND_GUIDELINES}
     Create personalized text content based on segments_data.
     Tone: Engaging, enthusiastic, and quirky.
+    
+    STRICT DATA RULES:
+    - You MUST output a list of drafts in 'content_drafts'.
+    - Each draft MUST use the key 'text_content' for the actual message text (do NOT use 'body', 'post_text', or 'video_concept').
     
     EXIT CONDITION: Format strictly according to ContentResult schema and terminate.
     CRITICAL: JSON ONLY.""",

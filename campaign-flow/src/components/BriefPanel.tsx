@@ -1,5 +1,5 @@
 import React from 'react';
-import { BriefData } from '../context/BlackboardContext';
+import { BriefData } from '../types/blackboard';
 import { Target, Flag, Zap, Megaphone, ShoppingBag } from 'lucide-react';
 import '../styles/BriefPanel.css';
 

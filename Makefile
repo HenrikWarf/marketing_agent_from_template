@@ -44,8 +44,7 @@ lint-app:
 
 test-app:
 	@echo "--- Testing Frontend ---"
-	@echo "No frontend tests configured yet. Adding placeholder."
-	# cd campaign-flow && npm test
+	cd campaign-flow && npm test
 
 validate-contract:
 	@echo "--- Validating Data Contract ---"

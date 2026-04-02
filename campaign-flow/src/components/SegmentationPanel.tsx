@@ -1,5 +1,5 @@
 import React from 'react';
-import { SegmentationData } from '../context/BlackboardContext';
+import { SegmentationData } from '../types/blackboard';
 import { Users, Info } from 'lucide-react';
 import '../styles/SegmentationPanel.css';
 

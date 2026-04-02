@@ -1,5 +1,5 @@
 import { useState, useCallback } from 'react';
-import { useBlackboard } from '../context/BlackboardContext';
+import { useBlackboard } from './useBlackboard';
 
 export interface Message {
   role: 'user' | 'model';
@@ -75,6 +75,8 @@ export const useChatStream = () => {
       let fullText = '';
       let lastKnownAgent = agentId;
 
+      if (!reader) return;
+
       const processJsonInText = (text: string) => {
         const jsonMatches = text.match(/\{[\s\S]*?\}(?=\s*\{|\s*$)/g) || [];
         let cleanDisplay = text;
@@ -98,7 +100,9 @@ export const useChatStream = () => {
               
               cleanDisplay = cleanDisplay.replace(match, '').trim();
             }
-          } catch (e) {}
+          } catch (e) {
+            console.warn("HOOK: JSON parse failed", e);
+          }
         }
 
         if (matchedSomething && (!cleanDisplay || cleanDisplay === ".")) {
@@ -107,9 +111,13 @@ export const useChatStream = () => {
         return { isMatch: matchedSomething, content: cleanDisplay };
       };
 
-      while (true) {
+      let reading = true;
+      while (reading) {
         const { value, done } = await reader.read();
-        if (done) break;
+        if (done) {
+          reading = false;
+          break;
+        }
 
         const chunk = decoder.decode(value, { stream: true });
         const lines = chunk.split('\n');
@@ -172,7 +180,9 @@ export const useChatStream = () => {
                   });
                 }
               }
-            } catch (e) {}
+            } catch (e) {
+              console.error("HOOK: Event parse failed", e);
+            }
           }
         }
       }

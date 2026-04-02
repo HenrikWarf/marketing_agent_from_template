@@ -1,5 +1,5 @@
 import React from 'react';
-import { RecommendationData } from '../context/BlackboardContext';
+import { RecommendationData } from '../types/blackboard';
 import { Sparkles, TrendingUp, Target, Lightbulb } from 'lucide-react';
 import '../styles/RecommendationPanel.css';
 

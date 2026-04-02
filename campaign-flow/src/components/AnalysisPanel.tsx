@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { AnalysisData } from '../context/BlackboardContext';
+import { AnalysisData } from '../types/blackboard';
 import { 
   BarChart, 
   Bar, 
@@ -32,7 +32,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
     // Support flat objects by converting them to array of {name, value}
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const entries = Object.entries(value);
-      const isAllNumeric = entries.every(([_, v]) => typeof v === 'number' || (!isNaN(parseFloat(v as any)) && isFinite(v as any)));
+      const isAllNumeric = entries.every(([, v]) => typeof v === 'number' || (!isNaN(parseFloat(v as any)) && isFinite(v as any)));
       if (isAllNumeric && entries.length > 1) {
         rawData = entries.map(([k, v]) => ({ name: k, value: typeof v === 'number' ? v : parseFloat(v as any) }));
       } else {

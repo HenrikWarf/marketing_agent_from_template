@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Rocket, CheckCircle2, ChevronDown, ChevronUp, Copy, AlertTriangle, Terminal } from 'lucide-react';
 import Modal from './Modal';
-import { BriefData, SegmentationData, ContentData } from '../context/BlackboardContext';
+import { BriefData, SegmentationData, ContentData } from '../types/blackboard';
 import '../styles/ActivationModal.css';
 
 interface ActivationModalProps {
@@ -65,7 +65,7 @@ const ActivationModal: React.FC<ActivationModalProps> = ({ isOpen, onClose, stra
   };
 
   const getDraftContent = (draft: any) => {
-    return draft.copy || draft.content || draft.text || draft.body || draft.message || '';
+    return draft.text_content || '';
   };
 
   return (

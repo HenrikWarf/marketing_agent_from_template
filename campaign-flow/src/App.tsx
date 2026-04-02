@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { useBlackboard } from './context/BlackboardContext';
+import { useBlackboard } from './hooks/useBlackboard';
 import ChatInterface from './components/ChatInterface';
 import BlackboardCard from './components/BlackboardCard';
 import PlaceholderCard from './components/PlaceholderCard';
@@ -258,7 +258,7 @@ const App: React.FC = () => {
       });
   }, [currentEnv]);
 
-  const handleNewSession = async () => {
+  const handleNewSession = useCallback(async () => {
     if (!currentAgent) {
       console.warn("UI: No agent selected, skipping session creation.");
       return;
@@ -275,11 +275,11 @@ const App: React.FC = () => {
     } catch (e) {
       console.error("UI: Session creation failed", e);
     }
-  };
+  }, [currentAgent, currentEnv]);
 
   useEffect(() => {
     if (currentAgent) handleNewSession();
-  }, [currentAgent]);
+  }, [currentAgent, handleNewSession]);
 
   return (
     <div className="app-container">

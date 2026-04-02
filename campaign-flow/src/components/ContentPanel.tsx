@@ -1,71 +1,62 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { ContentData } from '../context/BlackboardContext';
+import { ContentData } from '../types/blackboard';
 import { Mail, MessageSquare, Smartphone } from 'lucide-react';
 import '../styles/ContentPanel.css';
 
 const ContentPanel: React.FC<{ data: ContentData }> = ({ data }) => {
   const [activeTabIndex, setActiveTabIndex] = useState(0);
 
-  const getDraftContent = (draft: any) => {
-    if (!draft) return '';
-    // Comprehensive check for common keys used by LLMs for various channels
-    return (
-      draft.copy || 
-      draft.content || 
-      draft.text || 
-      draft.body || 
-      draft.message || 
-      draft.caption || 
-      draft.post || 
-      draft.ad_copy || 
-      draft.description || 
-      ''
-    );
-  };
+  if (!data.content_drafts || data.content_drafts.length === 0) {
+    return <div className="no-content">No drafts generated yet.</div>;
+  }
+
+  const activeDraft = data.content_drafts[activeTabIndex];
 
   const getIcon = (channel: string) => {
-    const c = (channel || '').toLowerCase();
-    if (c.includes('email')) return <Mail size={16} />;
-    if (c.includes('sms')) return <Smartphone size={16} />;
-    return <MessageSquare size={16} />;
+    const c = channel.toLowerCase();
+    if (c.includes('email')) return <Mail size={18} />;
+    if (c.includes('sms')) return <Smartphone size={18} />;
+    return <MessageSquare size={18} />;
   };
 
-  const drafts = data.content_drafts || (data as any).drafts || (data as any).social_posts || (data as any).posts || [];
-  const activeDraft = drafts?.[activeTabIndex];
+  const getDraftContent = (draft: any) => {
+    return draft.text_content || draft.body || draft.post_text || draft.text || draft.video_concept || draft.content || '';
+  };
 
   return (
     <div className="content-container">
-      <div className="channel-tabs">
-        {drafts && drafts.length > 0 ? drafts.map((draft: any, i: number) => (
-          <button
-            key={i}
-            onClick={() => setActiveTabIndex(i)}
-            className={`tab-button ${activeTabIndex === i ? 'active' : ''}`}
+      <div className="content-tabs">
+        {data.content_drafts.map((draft, idx) => (
+          <button 
+            key={draft.channel} 
+            className={`tab-button ${activeTabIndex === idx ? 'active' : ''}`}
+            onClick={() => setActiveTabIndex(idx)}
           >
-            {getIcon(draft.channel || draft.platform)}
-            {draft.channel || draft.platform || 'Channel'}
+            {getIcon(draft.channel)}
+            <span>{draft.channel}</span>
           </button>
-        )) : <span className="empty-state-text">No drafts available.</span>}
+        ))}
       </div>
 
-      {activeDraft && (
-        <div className="draft-view">
-          {(activeDraft.subject || activeDraft.title) && (
-            <div className="subject-banner">
-              <span className="banner-label">SUBJECT / TITLE</span>
-              <span className="banner-value">{activeDraft.subject || activeDraft.title}</span>
-            </div>
-          )}
-          <div className="content-body markdown-body">
-            <ReactMarkdown>{getDraftContent(activeDraft)}</ReactMarkdown>
-          </div>
-          <div className="content-footer">
-            <span>Target: <strong>{data.target_segment}</strong></span>
-            <span>CTA: <strong>{data.call_to_action}</strong></span>
-          </div>
+      <div className="draft-preview-card">
+        <div className="draft-header">
+          <span className="channel-label">{activeDraft.channel}</span>
+          {activeDraft.subject && <span className="subject-line">Subject: {activeDraft.subject}</span>}
         </div>
-      )}
+        <div className="draft-body markdown-body">
+          <ReactMarkdown>{getDraftContent(activeDraft)}</ReactMarkdown>
+        </div>
+      </div>
+
+      <div className="content-meta">
+        <div className="meta-item">
+          <strong>Target:</strong> {data.target_segment}
+        </div>
+        <div className="meta-item">
+          <strong>CTA:</strong> {data.call_to_action}
+        </div>
+      </div>
     </div>
   );
 };

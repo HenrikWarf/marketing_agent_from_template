@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import ReactMarkdown from 'react-markdown';
-import { Send, Plus, RefreshCw, PenTool, ChevronRight } from 'lucide-react';
+import { Send, User, Bot, Loader2, Sparkles, Activity, ChevronUp, ChevronDown } from 'lucide-react';
 import { useChatStream, AgentStep } from '../hooks/useChatStream';
 import '../styles/ChatInterface.css';
 
@@ -12,168 +11,140 @@ interface ChatInterfaceProps {
   onDataReceived?: (type: string) => void;
 }
 
-const TypingIndicator = () => (
-  <div className="typing-indicator" style={{ alignSelf: 'flex-start', margin: '8px 0' }}>
-    <div className="typing-dot"></div>
-    <div className="typing-dot"></div>
-    <div className="typing-dot"></div>
-  </div>
-);
-
-const WorkflowBreadcrumbs: React.FC<{ steps: AgentStep[] }> = ({ steps }) => {
-  if (steps.length === 0) return null;
-
-  return (
-    <div className="workflow-container">
-      {steps.map((step, i) => (
-        <React.Fragment key={i}>
-          <div className={`workflow-node node-${step.id} ${step.active ? 'active' : ''}`}>
-            <div className="workflow-dot" />
-            <div className="workflow-label-area">
-              <span className="workflow-name">{step.name}</span>
-              {step.active && step.status && (
-                <span className="workflow-status">{step.status}</span>
-              )}
-            </div>
-          </div>
-          {i < steps.length - 1 && (
-            <div className="workflow-arrow">
-              <ChevronRight size={14} />
-            </div>
-          )}
-        </React.Fragment>
-      ))}
-    </div>
-  );
-};
-
 const ChatInterface: React.FC<ChatInterfaceProps> = ({ 
   currentEnv, 
   agentId, 
   sessionId, 
   onNewSession,
-  onDataReceived
+  onDataReceived 
 }) => {
-  const [input, setInput] = useState('');
-  const { messages, isStreaming, currentAgent, activeTool, agentHistory, sendMessage } = useChatStream();
+  const [inputValue, setInputValue] = useState('');
+  const [isWorkflowExpanded, setIsWorkflowExpanded] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { 
+    messages, 
+    isStreaming, 
+    activeTool, 
+    agentHistory, 
+    sendMessage, 
+    clearMessages 
+  } = useChatStream();
 
   const scrollToBottom = () => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
 
   useEffect(() => {
     scrollToBottom();
-  }, [messages, activeTool, isStreaming, agentHistory]);
+  }, [messages, activeTool]);
 
-  // Maintain focus and auto-expand height
+  // Auto-expand workflow if streaming
   useEffect(() => {
-    if (!isStreaming) {
-      textareaRef.current?.focus();
-    }
+    if (isStreaming) setIsWorkflowExpanded(true);
   }, [isStreaming]);
 
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${Math.min(textareaRef.current.scrollHeight, 200)}px`;
-    }
-  }, [input]);
-
-  const handleSend = () => {
-    if (!input.trim() || isStreaming) return;
-    const text = input;
-    setInput('');
-    sendMessage(text, currentEnv, agentId, sessionId, onDataReceived);
+  const handleSend = async () => {
+    if (!inputValue.trim() || isStreaming) return;
+    const text = inputValue;
+    setInputValue('');
+    await sendMessage(text, currentEnv, agentId, sessionId, onDataReceived);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+  const handleClear = () => {
+    clearMessages();
+    onNewSession();
   };
 
-  const getAgentDisplay = (id?: string | null) => {
-    if (!id) return null;
-    return id.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+  const renderWorkflowPanel = () => {
+    if (agentHistory.length === 0) return null;
+    
+    return (
+      <div className={`workflow-popup ${isWorkflowExpanded ? 'expanded' : 'collapsed'}`}>
+        <div className="workflow-popup-header" onClick={() => setIsWorkflowExpanded(!isWorkflowExpanded)}>
+          <div className="header-label">
+            <Activity size={14} className={isStreaming ? 'pulse-icon' : ''} />
+            <span>Agent Handoffs</span>
+            <span className="step-count">{agentHistory.length}</span>
+          </div>
+          {isWorkflowExpanded ? <ChevronDown size={14} /> : <ChevronUp size={14} />}
+        </div>
+        
+        {isWorkflowExpanded && (
+          <div className="workflow-steps-list">
+            {agentHistory.map((step: AgentStep, idx: number) => (
+              <div key={step.id + idx} className={`workflow-step-item ${step.active ? 'active' : ''}`}>
+                <div className="step-indicator">
+                  <div className="step-line" />
+                  <div className="step-dot" />
+                </div>
+                <div className="step-content">
+                  <div className="step-agent-name">{step.name}</div>
+                  {step.status && <div className="step-status-text">{step.status}</div>}
+                </div>
+                {step.active && <Loader2 size={12} className="animate-spin" />}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
     <div className="chat-container">
-      <header className="chat-header">
-        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ 
-            backgroundColor: 'var(--google-blue)', 
-            color: 'white', 
-            borderRadius: '8px', 
-            padding: '6px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center'
-          }}>
-            <PenTool size={18} />
-          </div>
-          <span className="chat-title">CampaignFlow</span>
+      <div className="chat-header">
+        <div className="header-left">
+          <Sparkles size={18} color="var(--google-blue)" />
+          <h3>Campaign Orchestrator</h3>
         </div>
-        <button 
-          onClick={onNewSession}
-          className="new-chat-button"
-        >
-          <Plus size={16} /> New Chat
+        <button onClick={handleClear} className="clear-btn" title="New Session">
+          New Session
         </button>
-      </header>
-
-      <div className="messages-list">
-        {messages.map((msg, i) => {
-          if (msg.role === 'model' && i === messages.length - 1 && isStreaming && !msg.parts[0].text) {
-            return null; 
-          }
-          
-          if (!msg.parts[0].text && msg.role === 'model') return null;
-
-          return (
-            <div 
-              key={i} 
-              className={`message-bubble ${msg.role}`}
-            >
-              {msg.role === 'model' && (
-                <div className="agent-name-label">
-                  {getAgentDisplay(msg.agentId) || 'Agent'}
-                </div>
-              )}
-              <div className="markdown-body">
-                <ReactMarkdown>{msg.parts.map(p => p.text).join('')}</ReactMarkdown>
-              </div>
-            </div>
-          );
-        })}
-        
-        {isStreaming && !messages[messages.length-1]?.parts[0]?.text && <TypingIndicator />}
-
-        {isStreaming && <WorkflowBreadcrumbs steps={agentHistory} />}
-
-        <div ref={messagesEndRef} />
       </div>
 
-      <div className="chat-input-area">
-        <div className="input-pill">
-          <textarea 
-            ref={textareaRef}
-            rows={1}
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            onKeyDown={handleKeyDown}
-            placeholder="Talk to your marketing team..."
-            className="chat-input"
+      <div className="messages-area">
+        {messages.length === 0 ? (
+          <div className="empty-chat">
+            <Bot size={48} strokeWidth={1} />
+            <p>Welcome! Ask me to recommend a campaign or start building one from scratch.</p>
+          </div>
+        ) : (
+          <>
+            {messages.map((m, i) => (
+              <div key={i} className={`message-row ${m.role}`}>
+                <div className="avatar">
+                  {m.role === 'user' ? <User size={16} /> : <Bot size={16} />}
+                </div>
+                <div className="message-bubble">
+                  {m.agentId && m.role === 'model' && (
+                    <div className="agent-label">{m.agentId.replace(/_/g, ' ')}</div>
+                  )}
+                  <div className="message-content">
+                    {m.parts[0].text || (isStreaming && i === messages.length - 1 ? <Loader2 className="animate-spin" size={14} /> : '')}
+                  </div>
+                </div>
+              </div>
+            ))}
+            <div ref={messagesEndRef} />
+          </>
+        )}
+      </div>
+
+      <div className="chat-footer">
+        {renderWorkflowPanel()}
+        <div className="input-row">
+          <input
+            type="text"
+            placeholder="Type a message..."
+            value={inputValue}
+            onChange={(e) => setInputValue(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleSend()}
             disabled={isStreaming}
-            autoFocus
           />
           <button 
-            onClick={handleSend}
-            disabled={isStreaming || !input.trim()}
-            className={`send-button ${input.trim() && !isStreaming ? 'active' : 'disabled'}`}
+            onClick={handleSend} 
+            disabled={!inputValue.trim() || isStreaming}
+            className="send-btn"
           >
             <Send size={18} />
           </button>

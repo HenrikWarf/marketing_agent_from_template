@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LucideIcon, ChevronRight, Sparkles } from 'lucide-react';
+import { LucideIcon, ChevronRight } from 'lucide-react';
 import '../styles/BlackboardCard.css';
 
 interface BlackboardCardProps {
@@ -21,7 +21,7 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
       if (!isExpanded) setIsExpanded(true);
       setLastUpdated(new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }));
     }
-  }, [isEmpty]);
+  }, [isEmpty, isExpanded]);
 
   const toggleExpand = () => {
     if (isEmpty) return; // Prevent expanding empty cards in some views

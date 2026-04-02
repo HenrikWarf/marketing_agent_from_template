@@ -1,6 +1,6 @@
 import React from 'react';
 import ReactMarkdown from 'react-markdown';
-import { ReviewData } from '../context/BlackboardContext';
+import { ReviewData } from '../types/blackboard';
 import { CheckCircle, XCircle, AlertCircle, Info } from 'lucide-react';
 import '../styles/ReviewPanel.css';
 
