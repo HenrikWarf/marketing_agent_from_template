@@ -97,7 +97,9 @@ const CampaignPortal: React.FC<{ onBack: () => void }> = ({ onBack }) => {
             </div>
           </div>
 
-          <div className="detail-grid">
+          {/* SINGLE COLUMN STACK */}
+          <div className="detail-stack">
+            {/* 1. API SECTION */}
             <section className="detail-section">
               <div className="section-title">
                 <Globe size={18} />
@@ -151,6 +153,7 @@ print(f"Targeting {len(segments)} segments for {data['name']}")`}
               </div>
             </section>
 
+            {/* 2. STRATEGY BRIEF */}
             <section className="detail-section">
               <div className="section-title">
                 <FileText size={18} />
@@ -172,6 +175,7 @@ print(f"Targeting {len(segments)} segments for {data['name']}")`}
               </div>
             </section>
 
+            {/* 3. TARGET SEGMENTS */}
             <section className="detail-section">
               <div className="section-title">
                 <Users size={18} />
@@ -187,7 +191,7 @@ print(f"Targeting {len(segments)} segments for {data['name']}")`}
                     {s.sql && (
                         <div className="segment-sql-preview">
                             <Terminal size={12} />
-                            <code>{s.sql.substring(0, 60)}...</code>
+                            <code>{s.sql.substring(0, 80)}...</code>
                         </div>
                     )}
                   </div>
@@ -195,7 +199,8 @@ print(f"Targeting {len(segments)} segments for {data['name']}")`}
               </div>
             </section>
 
-            <section className="detail-section full-width">
+            {/* 4. ACTIVATED CONTENT */}
+            <section className="detail-section">
               <div className="section-title">
                 <MessageSquare size={18} />
                 <h3>Activated Content</h3>

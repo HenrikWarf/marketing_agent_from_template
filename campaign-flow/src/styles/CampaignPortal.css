@@ -192,10 +192,10 @@
   font-size: 0.95rem;
 }
 
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 32px;
+.detail-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
 }
 
 .detail-section {
@@ -203,8 +203,6 @@
   flex-direction: column;
   gap: 20px;
 }
-
-.detail-section.full-width { grid-column: span 2; }
 
 .section-title {
   display: flex;
