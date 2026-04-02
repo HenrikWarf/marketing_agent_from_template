@@ -23,6 +23,31 @@ The system uses three primary sequential pipelines called by a central **Marketi
 *   **Self-Healing**: The `BigQueryReflectRetryPlugin` is applied at the App level to automatically recover from SQL errors.
 *   **Strict JSON**: All sub-agents are commanded to output **ONLY structured JSON** to ensure clean parsing by the UI and prevent conversational "leaks" into data cards.
 
+## 🧪 Testing & Validation
+
+CampaignFlow uses a multi-layered testing strategy to ensure reliability across the agent-frontend boundary.
+
+### 1. Data Contract Validation
+To prevent UI breaks due to agent "hallucinations" or schema changes, we use a custom validator:
+*   **Script**: `scripts/validate_contract.py`
+*   **Function**: Compares Python Pydantic models in `agent.py` with TypeScript interfaces in `BlackboardContext.ts`.
+*   **Usage**: Run via `make validate-contract`.
+
+### 2. Modular Behavioral Evaluations (ADK Eval)
+The agent orchestration is validated against a 5-stage workflow defined in `tests/eval/evalsets/core_workflow.evalset.json`:
+1.  **Analysis**: Direct data extraction capability.
+2.  **Recommendation**: Generation of 3 distinct campaign ideas.
+3.  **Strategy**: Formal briefing and audience segmentation.
+4.  **Content**: Personalized drafting for multiple channels.
+5.  **Review**: Brand compliance and feedback logic.
+
+### 3. CI/CD Pipeline
+The `ci.sh` script (run via `make test`) executes the following in order:
+1.  **Contract Validation**: Ensures backend and frontend are in sync.
+2.  **Linting**: Runs `ruff` (Agents) and `eslint` (App).
+3.  **Unit Tests**: Runs `pytest` and `vitest`.
+4.  **Behavioral Eval**: Executes the core marketing workflow evaluations.
+
 ## 🚀 The Activation Workflow
 
 CampaignFlow implements a full production lifecycle via the **Activate** feature:

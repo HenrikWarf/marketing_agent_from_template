@@ -24,6 +24,11 @@ A production-ready marketing orchestration platform built with **Google ADK** an
 - **Activation**: Approved campaigns must be saved via the `POST /api/activate` endpoint to the `campaigns.db` SQLite database.
 - **Persistence**: Never remove or bypass the `ActivationModal` confirmation flow.
 
+## Testing & Validation Mandates
+- **Contract Sync**: ALWAYS run `make validate-contract` before submitting UI or Agent schema changes.
+- **Behavioral Evals**: Any change to orchestration logic MUST be verified with `make eval`.
+- **Modular Tests**: Maintain the 5-stage separation in `core_workflow.evalset.json` to prevent evaluation hanging.
+
 ## File Structure Mandates
 - **Primary Agents**: `agents/marketing_agent/agent.py`
 - **Frontend Source**: `campaign-flow/src/`
