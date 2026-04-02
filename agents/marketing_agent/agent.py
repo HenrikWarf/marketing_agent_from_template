@@ -114,10 +114,14 @@ analysis_agent = Agent(
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to AnalysisResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    """,
     tools=data_tools,
     output_schema=AnalysisResult,
-    output_key="analysis_data"
+    output_key="analysis_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Analyzes BigQuery data (sales, products, customers) to find trends and insights."
 )
 
 # 2. Recommendation Agents
@@ -174,29 +178,40 @@ campaign_architect = Agent(
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to BriefResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    """,
     tools=data_tools,
     output_schema=BriefResult,
-    output_key="brief_data"
+    output_key="brief_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Defines the campaign strategy, goals, and business opportunities."
 )
 
 segmentation_agent = Agent(
     name="segmentation_agent",
     model=MODEL_NAME,
     instruction=f"""You are a segmentation expert at Crazy Furnishing Company. 
-    Categorize customers based on the campaign brief (`brief_data`).
+    Your goal is to categorize customers into meaningful segments based on the campaign brief (`brief_data`).
     
-    RULES:
-    1. USE DATA: You MUST query the customer table: `{PROJECT_ID}.{DATASET_ID}.customer`.
-    2. BE ACCURATE: Run `COUNT(*)` queries to find the ACTUAL number of users for each segment.
+    REQUIRED WORKFLOW:
+    1. READ THE BRIEF: Identify the target audience (e.g., high churn risk, high CLV).
+    2. QUERY DATA: You MUST run at least one SQL query on `{PROJECT_ID}.{DATASET_ID}.customer` to find the distribution of these users.
+    3. POPULATE SEGMENTS: For each group you find (e.g., by 'favorite_category'), create a segment object with a 'name', 'description', and the ACTUAL 'count' from your query.
+    4. SCHEMA: Your final output must strictly follow the SegmentationResult schema.
     
     Marketing Schema: {MARKETING_SCHEMA}
     
-    EXIT CONDITION: Format strictly according to SegmentationResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    EXIT CONDITION: Format your final output strictly according to the SegmentationResult schema and terminate. 
+    CRITICAL: The 'segments' list must NOT be empty. It must contain the real data you found.
+    CRITICAL: JSON ONLY.
+    """,
     tools=data_tools,
     output_schema=SegmentationResult,
-    output_key="segments_data"
+    output_key="segments_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Segments customers into marketing categories based on data and strategy."
 )
 
 strategy_pipeline = SequentialAgent(
@@ -214,11 +229,17 @@ content_agent = Agent(
     Tone: Engaging, enthusiastic, and quirky.
     
     EXIT CONDITION: Format strictly according to ContentResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    """,
     output_schema=ContentResult,
-    output_key="content_data"
+    output_key="content_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Generates personalized marketing copy for targeted segments."
 )
 
+
+# 5. Reviewer Agent - Validates content against guidelines
 reviewer_agent = Agent(
     name="reviewer_agent",
     model=MODEL_NAME,
@@ -226,9 +247,13 @@ reviewer_agent = Agent(
     Review content_data for brand consistency and compliance.
     
     EXIT CONDITION: Format strictly according to ReviewResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    """,
     output_schema=ReviewResult,
-    output_key="review_data"
+    output_key="review_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Reviews marketing content against company brand guidelines."
 )
 
 content_pipeline = SequentialAgent(
@@ -237,7 +262,7 @@ content_pipeline = SequentialAgent(
     description="Sequential pipeline for drafting and reviewing content."
 )
 
-# 5. Marketing Manager
+# 6. Marketing Manager
 root_agent = Agent(
     name="marketing_manager",
     model=MODEL_NAME,

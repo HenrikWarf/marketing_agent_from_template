@@ -26,8 +26,10 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
 
   // Determine if data is chartable
   const chartData = useMemo(() => {
+    if (!value) return null;
     let rawData = [...(Array.isArray(value) ? value : [])];
     
+    // Support flat objects by converting them to array of {name, value}
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const entries = Object.entries(value);
       const isAllNumeric = entries.every(([_, v]) => typeof v === 'number' || (!isNaN(parseFloat(v as any)) && isFinite(v as any)));
@@ -47,20 +49,23 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
       rawData.sort((a, b) => {
         const aVal = a[sortConfig.key];
         const bVal = b[sortConfig.key];
+        if (aVal === undefined || bVal === undefined) return 0;
         if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
         if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
         return 0;
       });
     }
 
-    const firstItem = rawData[0];
+    const firstItem = rawData[0] || {};
     const headers = Object.keys(firstItem);
+    
     const numericKeys = headers.filter(h => {
       const val = firstItem[h];
       return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
     });
 
     const labelKey = headers.find(h => typeof firstItem[h] === 'string') || headers[0];
+
     if (numericKeys.length === 0) return null;
 
     const formattedData = rawData.map(item => {
@@ -72,7 +77,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
     });
 
     return { data: formattedData, labelKey, valueKey: numericKeys[0] };
-  }, [value, label, sortConfig]);
+  }, [value, sortConfig]);
 
   const requestSort = (key: string) => {
     let direction: 'asc' | 'desc' = 'asc';
@@ -85,7 +90,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
   const renderContent = () => {
     if (chartData) {
       if (viewMode === 'table') {
-        const headers = Object.keys(chartData.data[0]);
+        const headers = chartData.data.length > 0 ? Object.keys(chartData.data[0]) : [];
         return (
           <div className="data-table-container">
             <table className="data-table">
@@ -144,7 +149,6 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
       );
     }
 
-    // fallback for objects/primatives (remain unsorted as they are usually single values)
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const entries = Object.entries(value);
       return (
@@ -193,6 +197,21 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
 };
 
 const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
+  const visualizations = useMemo(() => {
+    if (!data.visualizations) return [];
+    
+    // If it's a flat array of data objects (not wrapped in title/type/data)
+    if (Array.isArray(data.visualizations) && data.visualizations.length > 0 && !data.visualizations[0].data) {
+      return [{
+        title: "Key Data Patterns",
+        type: "bar",
+        data: data.visualizations
+      }];
+    }
+    
+    return data.visualizations;
+  }, [data.visualizations]);
+
   return (
     <div className="analysis-container">
       <div className="analysis-summary-box">
@@ -200,18 +219,17 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
         <p className="summary-text">{data.summary}</p>
       </div>
 
-      {/* Explicit Visualizations Section */}
-      {(data as any).visualizations && (data as any).visualizations.length > 0 && (
+      {visualizations.length > 0 && (
         <div className="analysis-visualizations-box">
           <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
             <Presentation size={18} color="var(--google-blue)" />
             <h4 className="section-title" style={{ marginBottom: 0 }}>Key Visualizations</h4>
           </div>
           <div className="metrics-list">
-            {(data as any).visualizations.map((viz: any, i: number) => (
+            {visualizations.map((viz: any, i: number) => (
               <MetricView 
                 key={i} 
-                label={viz.title || "Visualization"} 
+                label={viz.title || "Data Pattern"} 
                 value={viz.data} 
                 initialMode={viz.type || 'bar'} 
               />

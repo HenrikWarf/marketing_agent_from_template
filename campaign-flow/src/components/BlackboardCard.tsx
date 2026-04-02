@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { LucideIcon, ChevronRight } from 'lucide-react';
+import { LucideIcon, ChevronRight, Sparkles } from 'lucide-react';
 import '../styles/BlackboardCard.css';
 
 interface BlackboardCardProps {
@@ -8,9 +8,10 @@ interface BlackboardCardProps {
   color: string;
   isEmpty: boolean;
   children: React.ReactNode;
+  description?: string;
 }
 
-const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, color, isEmpty, children }) => {
+const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, color, isEmpty, children, description }) => {
   const [isExpanded, setIsExpanded] = useState(false);
   const [lastUpdated, setLastUpdated] = useState<string | null>(null);
 
@@ -22,21 +23,24 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
     }
   }, [isEmpty]);
 
-  const toggleExpand = () => setIsExpanded(!isExpanded);
+  const toggleExpand = () => {
+    if (isEmpty) return; // Prevent expanding empty cards in some views
+    setIsExpanded(!isExpanded);
+  };
 
   return (
     <div 
       className={`card ${isExpanded ? 'expanded' : 'minimized'} ${isEmpty ? 'empty' : 'populated'}`}
       style={{ '--accent-color': color } as React.CSSProperties}
     >
-      <div className="card-header" onClick={toggleExpand}>
+      <div className="card-header" onClick={toggleExpand} style={{ cursor: isEmpty ? 'default' : 'pointer' }}>
         <div className="header-main">
           <div className="icon-box">
             <Icon size={18} strokeWidth={2.5} />
           </div>
           <div className="title-area">
             <span className="card-title">{title}</span>
-            {lastUpdated && isExpanded && (
+            {!isEmpty && lastUpdated && isExpanded && (
               <span className="updated-timestamp">Updated {lastUpdated}</span>
             )}
           </div>
@@ -44,14 +48,16 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
         
         <div className="header-right">
           {!isEmpty && (
-            <div className="status-pill">
-              <div className="status-dot-inner" />
-              <span>Ready</span>
-            </div>
+            <>
+              <div className="status-pill">
+                <div className="status-dot-inner" />
+                <span>Ready</span>
+              </div>
+              <div className={`chevron-box ${isExpanded ? 'rotated' : ''}`}>
+                <ChevronRight size={16} />
+              </div>
+            </>
           )}
-          <div className={`chevron-box ${isExpanded ? 'rotated' : ''}`}>
-            <ChevronRight size={16} />
-          </div>
         </div>
       </div>
       
@@ -62,6 +68,18 @@ const BlackboardCard: React.FC<BlackboardCardProps> = ({ title, icon: Icon, colo
           </div>
         </div>
       </div>
+
+      {isEmpty && (
+        <div className="empty-state-container">
+          <div className="empty-icon-ghost">
+            <Icon size={40} strokeWidth={1} />
+          </div>
+          <p className="empty-message">{description || "Awaiting agent task..."}</p>
+          <div className="empty-progress-track">
+            <div className="empty-progress-dot" />
+          </div>
+        </div>
+      )}
     </div>
   );
 };
