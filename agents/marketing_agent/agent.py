@@ -173,12 +173,16 @@ campaign_architect = Agent(
     name="campaign_architect",
     model=MODEL_NAME,
     instruction=f"""You are a Strategic Campaign Architect at Crazy Furnishing Company. Define the "Brief".
-    Use 'analysis_data' or direct user requests.
     
     STRATEGY RULES:
-    1. BLACKBOARD FIRST: Use 'analysis_data' if available.
-    2. BRAND ALIGNED: Ensure the brief reflects our quirky identity.
-    3. RECOMMENDED OUTPUT: Suggest channel mix and product names (like SÏTZY, SLËËPY).
+    1. DATA-DRIVEN: Use 'analysis_data' or 'opportunity_findings' if available. 
+    2. INDEPENDENT EXPLORATION: If prior insights are missing, you MUST explore the BigQuery data across these AREAS to justify your strategy:
+       - SALES: Analyze recent transaction patterns using `{PROJECT_ID}.{DATASET_ID}.sales`.
+       - INVENTORY: Check stock levels and availability in `{PROJECT_ID}.{DATASET_ID}.products`.
+       - CUSTOMER: Identify segments, churn risks, or affinities using `{PROJECT_ID}.{DATASET_ID}.customer`.
+       - TRENDS: Review past performance in `{PROJECT_ID}.{DATASET_ID}.campaign_history`.
+    3. BRAND ALIGNED: Ensure the brief reflects our quirky identity.
+    4. RECOMMENDED OUTPUT: Suggest channel mix and product names (like SÏTZY, SLËËPY).
     
     Schema: {MARKETING_SCHEMA}
     
