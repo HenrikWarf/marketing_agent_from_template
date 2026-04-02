@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import { BlackboardProvider, useBlackboard } from './context/BlackboardContext';
 import ChatInterface from './components/ChatInterface';
 import BlackboardCard from './components/BlackboardCard';
 import PlaceholderCard from './components/PlaceholderCard';
+import Modal from './components/Modal';
 import AnalysisPanel from './components/AnalysisPanel';
 import SegmentationPanel from './components/SegmentationPanel';
 import ContentPanel from './components/ContentPanel';
@@ -17,7 +19,8 @@ import {
   Bot,
   Settings,
   LayoutGrid,
-  Sparkles
+  Sparkles,
+  Database
 } from 'lucide-react';
 
 type ViewType = 'analysis' | 'segmentation' | 'content' | 'review' | 'grid';
@@ -27,8 +30,6 @@ const Dashboard: React.FC = () => {
   const [activeView, setActiveView] = useState<ViewType>('analysis');
   const [isGridView, setIsGridView] = useState(false);
   
-  // Ref to track which sections we've already "auto-switched" to
-  // this prevents the UI from constantly jumping back if the user manually switched away
   const seenDataRef = useRef<Record<string, string | null>>({
     analysis: null,
     segmentation: null,
@@ -36,7 +37,6 @@ const Dashboard: React.FC = () => {
     review: null
   });
 
-  // SMART MONITOR: Watch blackboard for updates and auto-switch view
   useEffect(() => {
     const checkUpdate = (key: keyof typeof state, view: ViewType) => {
       const currentData = JSON.stringify(state[key]);
@@ -149,31 +149,50 @@ const App: React.FC = () => {
   const [currentAgent, setCurrentAgent] = useState('');
   const [sessionId, setSessionId] = useState('');
 
+  // Modals state
+  const [isSettingsOpen, setIsSettingsOpen] = useState(false);
+  const [isDataOpen, setIsDataOpen] = useState(false);
+  const [companyContext, setCompanyContext] = useState('');
+  const [brandGuidelines, setBrandGuidelines] = useState('');
+  const [customerSchema, setCustomerSchema] = useState<any[]>([]);
+
   useEffect(() => {
     fetch('/api/environments')
-      .then(res => {
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        return res.json();
-      })
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
-        setEnvironments(data.environments || []);
-        if (data.environments?.length > 0) setCurrentEnv(data.environments[0].id);
-      })
-      .catch(err => console.error("Failed to load environments:", err));
+        if (data) {
+          setEnvironments(data.environments || []);
+          if (data.environments?.length > 0) setCurrentEnv(data.environments[0].id);
+        }
+      });
+
+    // Prefetch static data safely
+    fetch('/api/context')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => data && setCompanyContext(data.content || ''))
+      .catch(() => {});
+
+    fetch('/api/guidelines')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => data && setBrandGuidelines(data.content || ''))
+      .catch(() => {});
+
+    fetch('/api/schema')
+      .then(res => res.ok ? res.json() : null)
+      .then(data => data && setCustomerSchema(data.schema || []))
+      .catch(() => {});
   }, []);
 
   useEffect(() => {
     if (!currentEnv) return;
     fetch(`/api/agents?env=${currentEnv}`)
-      .then(res => {
-        if (!res.ok) throw new Error(`Status ${res.status}`);
-        return res.json();
-      })
+      .then(res => res.ok ? res.json() : null)
       .then(data => {
-        setAgents(data.agents || []);
-        if (data.agents?.length > 0) setCurrentAgent(data.agents[0].id);
-      })
-      .catch(err => console.error("Failed to load agents:", err));
+        if (data) {
+          setAgents(data.agents || []);
+          if (data.agents?.length > 0) setCurrentAgent(data.agents[0].id);
+        }
+      });
   }, [currentEnv]);
 
   const handleNewSession = async () => {
@@ -238,7 +257,10 @@ const App: React.FC = () => {
             </div>
 
             <div className="header-actions">
-              <button className="icon-button">
+              <button className="icon-button" title="Data Reference" onClick={() => setIsDataOpen(true)}>
+                <Database size={20} />
+              </button>
+              <button className="icon-button" title="Brand Settings" onClick={() => setIsSettingsOpen(true)}>
                 <Settings size={20} />
               </button>
               <div className="user-avatar">
@@ -249,6 +271,60 @@ const App: React.FC = () => {
 
           <Dashboard />
         </main>
+
+        {/* Settings Modal */}
+        <Modal 
+          isOpen={isSettingsOpen} 
+          onClose={() => setIsSettingsOpen(false)} 
+          title="Brand Settings & Context"
+          icon={<Settings size={20} />}
+        >
+          <div className="modal-section">
+            <h3>Company Profile</h3>
+            <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
+              <ReactMarkdown>{companyContext}</ReactMarkdown>
+            </div>
+          </div>
+          <div className="modal-section">
+            <h3>Brand Guidelines</h3>
+            <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
+              <ReactMarkdown>{brandGuidelines}</ReactMarkdown>
+            </div>
+          </div>
+        </Modal>
+
+        {/* Data Reference Modal */}
+        <Modal 
+          isOpen={isDataOpen} 
+          onClose={() => setIsDataOpen(false)} 
+          title="Data Reference (BigQuery)"
+          icon={<Database size={20} />}
+        >
+          <div className="modal-section">
+            <h3>Customer Table Schema</h3>
+            <p style={{ fontSize: '0.85rem', color: 'var(--google-gray)', marginBottom: '16px' }}>
+              This schema is used by the Analysis and Segmentation agents to perform SQL queries.
+            </p>
+            <table className="schema-table">
+              <thead>
+                <tr>
+                  <th>Column</th>
+                  <th>Type</th>
+                  <th>Description</th>
+                </tr>
+              </thead>
+              <tbody>
+                {customerSchema.map(col => (
+                  <tr key={col.name}>
+                    <td style={{ fontWeight: 500 }}>{col.name}</td>
+                    <td><span className="type-tag">{col.type}</span></td>
+                    <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Modal>
       </div>
     </BlackboardProvider>
   );

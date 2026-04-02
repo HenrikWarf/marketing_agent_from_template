@@ -4,36 +4,43 @@
 # This script starts the ADK Agent Backend, the FastAPI Proxy, and the React UI.
 
 # Navigate to the project root (one level up from campaign-flow/scripts)
-cd "$(dirname "$0")/../../"
+ROOT_DIR="$(cd "$(dirname "$0")/../../" && pwd)"
+cd "$ROOT_DIR"
 
 # Function to handle cleanup on exit
 cleanup() {
+    echo ""
     echo "Shutting down CampaignFlow..."
     kill $ADK_PID 2>/dev/null
     kill $BACKEND_PID 2>/dev/null
     kill $FRONTEND_PID 2>/dev/null
+    # Robust cleanup of ports
+    lsof -ti:8000,3000,5173 | xargs kill -9 2>/dev/null
     exit
 }
 
 trap cleanup SIGINT SIGTERM
 
-# Kill any existing processes on these ports
-echo "Cleaning up stale processes..."
+# Kill any existing processes on these ports to avoid bind errors
+echo "Cleaning up stale processes on 8000, 3000, 5173..."
 lsof -ti:8000,3000,5173 | xargs kill -9 2>/dev/null
+sleep 1
 
 echo "Starting ADK Agent Backend (Port 8000)..."
 adk api_server agents/ --port 8000 --auto_create_session &
 ADK_PID=$!
 
 # Wait for ADK to be ready
-sleep 3
+echo "Waiting for ADK..."
+sleep 4
 
 echo "Starting CampaignFlow Proxy (FastAPI Port 3000)..."
-python3 -m frontend.app &
+PYTHONPATH="$ROOT_DIR" python3 -m frontend.app &
 BACKEND_PID=$!
 
 # Wait for Proxy to be ready
-sleep 2
+echo "Waiting for Proxy..."
+sleep 3
 
 echo "Starting CampaignFlow UI (React Port 5173)..."
 cd campaign-flow && npm run dev &

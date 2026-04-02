@@ -1,4 +1,5 @@
 import os
+import json
 from fastapi import FastAPI, Request, Query
 from fastapi.responses import FileResponse, StreamingResponse
 from fastapi.staticfiles import StaticFiles
@@ -62,6 +63,38 @@ async def list_agents(env: str = Query("local")):
     except Exception as e:
         print(f"Error listing agents for {env}: {e}")
         return {"agents": [], "error": str(e)}
+
+@app.get("/api/context")
+async def get_company_context():
+    """Fetch company profile and mission."""
+    from agents.marketing_agent.company_context import COMPANY_CONTEXT
+    return {"content": COMPANY_CONTEXT}
+
+@app.get("/api/guidelines")
+async def get_brand_guidelines():
+    """Fetch content generation guidelines."""
+    try:
+        # Get project root (one level up from frontend folder)
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, "agents", "marketing_agent", "brand_guidelines.md")
+        with open(path, "r") as f:
+            return {"content": f.read()}
+    except Exception as e:
+        print(f"Error reading guidelines: {e}")
+        return {"error": str(e)}
+
+@app.get("/api/schema")
+async def get_customer_schema():
+    """Fetch BigQuery customer table schema."""
+    try:
+        # Get project root
+        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        path = os.path.join(root, "agents", "marketing_agent", "customer_schema.json")
+        with open(path, "r") as f:
+            return {"schema": json.load(f)}
+    except Exception as e:
+        print(f"Error reading schema: {e}")
+        return {"error": str(e)}
 
 @app.post("/api/sessions")
 async def create_session(request: Request, env: str = Query("local")):

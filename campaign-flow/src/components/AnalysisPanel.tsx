@@ -11,44 +11,59 @@ import {
   LineChart,
   Line
 } from 'recharts';
-import { Table, BarChart2, LineChart as LineIcon } from 'lucide-react';
+import { Table, BarChart2, LineChart as LineIcon, Presentation, ArrowUp, ArrowDown } from 'lucide-react';
 import '../styles/AnalysisPanel.css';
 
 interface MetricViewProps {
   label: string;
   value: any;
+  initialMode?: 'table' | 'bar' | 'line';
 }
 
-const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
-  const [viewMode, setViewMode] = useState<'table' | 'bar' | 'line'>('table');
+const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'table' }) => {
+  const [viewMode, setViewMode] = useState<'table' | 'bar' | 'line'>(initialMode);
+  const [sortConfig, setSortConfig] = useState<{ key: string, direction: 'asc' | 'desc' } | null>(null);
 
   // Determine if data is chartable
   const chartData = useMemo(() => {
-    if (!Array.isArray(value) || value.length === 0 || typeof value[0] !== 'object') {
+    let rawData = [...(Array.isArray(value) ? value : [])];
+    
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      const entries = Object.entries(value);
+      const isAllNumeric = entries.every(([_, v]) => typeof v === 'number' || (!isNaN(parseFloat(v as any)) && isFinite(v as any)));
+      if (isAllNumeric && entries.length > 1) {
+        rawData = entries.map(([k, v]) => ({ name: k, value: typeof v === 'number' ? v : parseFloat(v as any) }));
+      } else {
+        return null;
+      }
+    }
+
+    if (rawData.length === 0 || typeof rawData[0] !== 'object') {
       return null;
     }
 
-    const headers = Object.keys(value[0]);
-    
-    // Find keys that are either numbers or numeric strings
+    // Apply Sorting if configured
+    if (sortConfig) {
+      rawData.sort((a, b) => {
+        const aVal = a[sortConfig.key];
+        const bVal = b[sortConfig.key];
+        if (aVal < bVal) return sortConfig.direction === 'asc' ? -1 : 1;
+        if (aVal > bVal) return sortConfig.direction === 'asc' ? 1 : -1;
+        return 0;
+      });
+    }
+
+    const firstItem = rawData[0];
+    const headers = Object.keys(firstItem);
     const numericKeys = headers.filter(h => {
-      const val = value[0][h];
+      const val = firstItem[h];
       return typeof val === 'number' || (!isNaN(parseFloat(val)) && isFinite(val));
     });
 
-    const labelKey = headers.find(h => typeof value[0][h] === 'string') || headers[0];
-
-    console.log(`Analyzing metric "${label}":`, {
-      headers,
-      numericKeys,
-      labelKey,
-      isChartable: numericKeys.length > 0
-    });
-
+    const labelKey = headers.find(h => typeof firstItem[h] === 'string') || headers[0];
     if (numericKeys.length === 0) return null;
 
-    // Convert data to ensure numeric types for Recharts
-    const formattedData = value.map(item => {
+    const formattedData = rawData.map(item => {
       const newItem = { ...item };
       numericKeys.forEach(k => {
         newItem[k] = typeof item[k] === 'number' ? item[k] : parseFloat(item[k]);
@@ -56,27 +71,40 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
       return newItem;
     });
 
-    return {
-      data: formattedData,
-      labelKey,
-      valueKey: numericKeys[0]
-    };
-  }, [value, label]);
+    return { data: formattedData, labelKey, valueKey: numericKeys[0] };
+  }, [value, label, sortConfig]);
+
+  const requestSort = (key: string) => {
+    let direction: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.direction === 'asc') {
+      direction = 'desc';
+    }
+    setSortConfig({ key, direction });
+  };
 
   const renderContent = () => {
     if (chartData) {
       if (viewMode === 'table') {
-        const headers = Object.keys(value[0]);
+        const headers = Object.keys(chartData.data[0]);
         return (
           <div className="data-table-container">
             <table className="data-table">
               <thead>
                 <tr>
-                  {headers.map(h => <th key={h}>{h.replace(/_/g, ' ')}</th>)}
+                  {headers.map(h => (
+                    <th key={h} onClick={() => requestSort(h)} style={{ cursor: 'pointer', userSelect: 'none' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        {h.replace(/_/g, ' ')}
+                        {sortConfig?.key === h && (
+                          sortConfig.direction === 'asc' ? <ArrowUp size={12} /> : <ArrowDown size={12} />
+                        )}
+                      </div>
+                    </th>
+                  ))}
                 </tr>
               </thead>
               <tbody>
-                {value.map((item: any, i: number) => (
+                {chartData.data.map((item: any, i: number) => (
                   <tr key={i}>
                     {headers.map(h => (
                       <td key={h}>
@@ -99,9 +127,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey={chartData.labelKey} fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
+                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                 <Bar dataKey={chartData.valueKey} fill="var(--google-blue)" radius={[4, 4, 0, 0]} barSize={30} />
               </BarChart>
             ) : (
@@ -109,9 +135,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
                 <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
                 <XAxis dataKey={chartData.labelKey} fontSize={10} tickLine={false} axisLine={false} />
                 <YAxis fontSize={10} tickLine={false} axisLine={false} />
-                <Tooltip 
-                  contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
-                />
+                <Tooltip contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }} />
                 <Line type="monotone" dataKey={chartData.valueKey} stroke="var(--google-blue)" strokeWidth={2} dot={{ r: 4 }} activeDot={{ r: 6 }} />
               </LineChart>
             )}
@@ -120,7 +144,7 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
       );
     }
 
-    // fallback for objects/arrays... (no change to existing logic below)
+    // fallback for objects/primatives (remain unsorted as they are usually single values)
     if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
       const entries = Object.entries(value);
       return (
@@ -140,14 +164,6 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
       );
     }
 
-    if (Array.isArray(value)) {
-      return (
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '4px', marginTop: '8px' }}>
-          {value.map((v, i) => <span key={i} className="simple-metric-tag">{String(v)}</span>)}
-        </div>
-      );
-    }
-
     return <div className="primitive-value">{typeof value === 'number' ? value.toLocaleString() : String(value)}</div>;
   };
 
@@ -157,25 +173,13 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value }) => {
         <div className="metric-label">{label.replace(/_/g, ' ')}</div>
         {chartData && (
           <div className="metric-toggles">
-            <button 
-              className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`} 
-              onClick={() => setViewMode('table')}
-              title="Table View"
-            >
+            <button className={`toggle-btn ${viewMode === 'table' ? 'active' : ''}`} onClick={() => setViewMode('table')} title="Table View">
               <Table size={14} />
             </button>
-            <button 
-              className={`toggle-btn ${viewMode === 'bar' ? 'active' : ''}`} 
-              onClick={() => setViewMode('bar')}
-              title="Bar Chart"
-            >
+            <button className={`toggle-btn ${viewMode === 'bar' ? 'active' : ''}`} onClick={() => setViewMode('bar')} title="Bar Chart">
               <BarChart2 size={14} />
             </button>
-            <button 
-              className={`toggle-btn ${viewMode === 'line' ? 'active' : ''}`} 
-              onClick={() => setViewMode('line')}
-              title="Line Chart"
-            >
+            <button className={`toggle-btn ${viewMode === 'line' ? 'active' : ''}`} onClick={() => setViewMode('line')} title="Line Chart">
               <LineIcon size={14} />
             </button>
           </div>
@@ -195,6 +199,26 @@ const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
         <h4 className="section-title">Summary</h4>
         <p className="summary-text">{data.summary}</p>
       </div>
+
+      {/* Explicit Visualizations Section */}
+      {(data as any).visualizations && (data as any).visualizations.length > 0 && (
+        <div className="analysis-visualizations-box">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+            <Presentation size={18} color="var(--google-blue)" />
+            <h4 className="section-title" style={{ marginBottom: 0 }}>Key Visualizations</h4>
+          </div>
+          <div className="metrics-list">
+            {(data as any).visualizations.map((viz: any, i: number) => (
+              <MetricView 
+                key={i} 
+                label={viz.title || "Visualization"} 
+                value={viz.data} 
+                initialMode={viz.type || 'bar'} 
+              />
+            ))}
+          </div>
+        </div>
+      )}
       
       <div className="analysis-metrics-box">
         <h4 className="section-title">Key Metrics & Insights</h4>
