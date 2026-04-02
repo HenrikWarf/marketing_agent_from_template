@@ -47,9 +47,12 @@ const CampaignPortal: React.FC<{ onBack: () => void }> = ({ onBack }) => {
         setSelectedId(null);
         setSelectedCampaign(null);
         fetchCampaigns();
+      } else {
+        alert("Failed to delete campaign: " + (data.message || "Unknown error"));
       }
     } catch (e) {
       console.error("Portal: Delete failed", e);
+      alert("Delete failed. Please check the console for details.");
     }
   };
 

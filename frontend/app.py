@@ -33,6 +33,10 @@ CONFIG = {
     "PROD_AGENT_ENGINE_ID": os.getenv("PROD_AGENT_ENGINE_ID"),
 }
 
+# Database configuration - Absolute path to root campaigns.db
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+DB_PATH = os.path.join(ROOT_DIR, 'campaigns.db')
+
 # Serve static files
 app.mount("/static", StaticFiles(directory="frontend/static"), name="static")
 
@@ -76,8 +80,7 @@ async def get_company_context():
 async def get_brand_guidelines():
     """Fetch content generation guidelines."""
     try:
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(root, "agents", "marketing_agent", "brand_guidelines.md")
+        path = os.path.join(ROOT_DIR, "agents", "marketing_agent", "brand_guidelines.md")
         with open(path, "r") as f:
             return {"content": f.read()}
     except Exception as e:
@@ -88,8 +91,7 @@ async def get_brand_guidelines():
 async def get_customer_schema():
     """Fetch BigQuery customer table schema."""
     try:
-        root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(root, "agents", "marketing_agent", "marketing_schema.json")
+        path = os.path.join(ROOT_DIR, "agents", "marketing_agent", "marketing_schema.json")
         with open(path, "r") as f:
             return {"schema": json.load(f)}
     except Exception as e:
@@ -103,7 +105,7 @@ async def activate_campaign(request: Request):
         body = await request.json()
         campaign_id = str(uuid.uuid4())[:8]
         
-        conn = sqlite3.connect('campaigns.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute(
             "INSERT INTO campaigns (id, name, strategy_json, segments_json, content_json) VALUES (?, ?, ?, ?, ?)",
@@ -131,7 +133,7 @@ async def activate_campaign(request: Request):
 async def list_activated_campaigns():
     """Fetch all activated campaigns from the local database."""
     try:
-        conn = sqlite3.connect('campaigns.db')
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute("SELECT id, name, created_at FROM campaigns ORDER BY created_at DESC")
@@ -152,7 +154,7 @@ async def list_activated_campaigns():
 async def get_activated_campaign(campaign_id: str):
     """Public API to fetch campaign material for downstream activation tools."""
     try:
-        conn = sqlite3.connect('campaigns.db')
+        conn = sqlite3.connect(DB_PATH)
         conn.row_factory = sqlite3.Row
         c = conn.cursor()
         c.execute("SELECT * FROM campaigns WHERE id = ?", (campaign_id,))
@@ -177,11 +179,16 @@ async def get_activated_campaign(campaign_id: str):
 async def delete_activated_campaign(campaign_id: str):
     """Remove a campaign from the local database."""
     try:
-        conn = sqlite3.connect('campaigns.db')
+        conn = sqlite3.connect(DB_PATH)
         c = conn.cursor()
         c.execute("DELETE FROM campaigns WHERE id = ?", (campaign_id,))
+        deleted = c.rowcount
         conn.commit()
         conn.close()
+        
+        if deleted == 0:
+            return {"status": "error", "message": f"Campaign {campaign_id} not found."}
+            
         return {"status": "success", "message": f"Campaign {campaign_id} deleted."}
     except Exception as e:
         print(f"Delete Error: {e}")
@@ -194,7 +201,6 @@ async def create_session(request: Request, env: str = Query("local")):
     app_name = body.get("app_name")
     
     if not app_name:
-        print(f"Validation Error: No app_name provided for {env} session")
         return {"status": "error", "message": "No agent selected"}
         
     try:
