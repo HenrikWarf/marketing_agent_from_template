@@ -127,6 +127,27 @@ const CampaignPortal: React.FC<{ onBack: () => void }> = ({ onBack }) => {
                     </div>
                   ))}
                 </div>
+                
+                <div className="api-usage-example">
+                  <div className="example-header">
+                    <Terminal size={14} />
+                    <span>Python Fetch Example</span>
+                  </div>
+                  <pre className="code-block">
+{`import requests
+
+# Fetch the full campaign bundle
+response = requests.get("${baseUrl}")
+data = response.json()
+
+# Access specific components
+strategy = data['strategy']
+segments = data['segments']
+content  = data['content']['content_drafts']
+
+print(f"Targeting {len(segments)} segments for {data['name']}")`}
+                  </pre>
+                </div>
               </div>
             </section>
 
