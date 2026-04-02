@@ -76,7 +76,6 @@ export const useChatStream = () => {
       let lastKnownAgent = agentId;
 
       const processJsonInText = (text: string) => {
-        // Find ALL JSON objects in the text (SequentialAgent might output multiple)
         const jsonMatches = text.match(/\{[\s\S]*?\}(?=\s*\{|\s*$)/g) || [];
         let cleanDisplay = text;
         let matchedSomething = false;
@@ -84,17 +83,18 @@ export const useChatStream = () => {
         for (const match of jsonMatches) {
           try {
             const parsed = JSON.parse(match);
-            const dataKeys = ['campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
+            const dataKeys = ['recommendations', 'campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
             
             if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
               matchedSomething = true;
               console.log("HOOK: Detected JSON in stream", parsed);
               
-              if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
-              if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
-              if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
-              if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
-              if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('content'); }
+              if (parsed.recommendations) { updateState({ recommendations_data: parsed }); onDataReceived?.('recommendations'); }
+              else if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
+              else if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
+              else if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
+              else if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
+              else if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('content'); }
               
               cleanDisplay = cleanDisplay.replace(match, '').trim();
             }
@@ -140,6 +140,7 @@ export const useChatStream = () => {
 
               if (data.session_state) {
                 updateState(data.session_state);
+                if (data.session_state.recommendations_data) onDataReceived?.('recommendations');
                 if (data.session_state.brief_data) onDataReceived?.('brief');
                 if (data.session_state.analysis_data) onDataReceived?.('analysis');
                 if (data.session_state.segments_data) onDataReceived?.('segmentation');
