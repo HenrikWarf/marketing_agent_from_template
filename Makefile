@@ -53,7 +53,7 @@ validate-contract:
 # --- Development Tools ---
 
 AGENT ?= agents/marketing_agent/
-EVALSET ?= tests/eval/evalsets/marketing_campaign.evalset.json
+EVALSET ?= tests/eval/evalsets/core_workflow.evalset.json
 
 eval:
 	$(UV) run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
