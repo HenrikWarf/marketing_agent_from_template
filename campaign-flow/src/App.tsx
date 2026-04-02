@@ -12,6 +12,7 @@ import SegmentationPanel from './components/SegmentationPanel';
 import ContentPanel from './components/ContentPanel';
 import ReviewPanel from './components/ReviewPanel';
 import RecommendationPanel from './components/RecommendationPanel';
+import CampaignPortal from './components/CampaignPortal';
 import './styles/Dashboard.css';
 import { 
   BarChart3, 
@@ -26,7 +27,8 @@ import {
   Database,
   ClipboardList,
   Lightbulb,
-  Rocket
+  Rocket,
+  Zap
 } from 'lucide-react';
 
 type ViewType = 'analysis' | 'recommendations' | 'brief' | 'content' | 'grid';
@@ -199,6 +201,7 @@ const Dashboard: React.FC = () => {
 
 const App: React.FC = () => {
   const { state } = useBlackboard();
+  const [showPortal, setShowPortal] = useState(false);
   const [environments, setEnvironments] = useState<any[]>([]);
   const [currentEnv, setCurrentEnv] = useState('local');
   const [agents, setAgents] = useState<any[]>([]);
@@ -283,154 +286,168 @@ const App: React.FC = () => {
 
   return (
     <div className="app-container">
-      <aside className="sidebar">
-        <ChatInterface 
-          currentEnv={currentEnv} 
-          agentId={currentAgent} 
-          sessionId={sessionId}
-          onNewSession={handleNewSession}
-          onDataReceived={(type) => {
-            console.log("UI: Auto-switching view to", type);
-          }}
-        />
-      </aside>
-      
-      <main className="main-content">
-        <header className="dashboard-header">
-          <div className="header-controls">
-            <div className="control-group">
-              <Globe size={18} color="var(--google-gray)" />
-              <select 
-                className="selector-transparent"
-                value={currentEnv} 
-                onChange={(e) => setCurrentEnv(e.target.value)}
-              >
-                {environments.length > 0 ? (
-                  environments.map(e => <option key={e.id} value={e.id}>{e.name}</option>)
-                ) : (
-                  <option value="">Loading environments...</option>
-                )}
-              </select>
+      {showPortal ? (
+        <CampaignPortal onBack={() => setShowPortal(false)} />
+      ) : (
+        <>
+          <aside className="sidebar">
+            <ChatInterface 
+              currentEnv={currentEnv} 
+              agentId={currentAgent} 
+              sessionId={sessionId}
+              onNewSession={handleNewSession}
+              onDataReceived={(type) => {
+                console.log("UI: Auto-switching view to", type);
+              }}
+            />
+          </aside>
+          
+          <main className="main-content">
+            <header className="dashboard-header">
+              <div className="header-controls">
+                <div className="control-group">
+                  <Globe size={18} color="var(--google-gray)" />
+                  <select 
+                    className="selector-transparent"
+                    value={currentEnv} 
+                    onChange={(e) => setCurrentEnv(e.target.value)}
+                  >
+                    {environments.length > 0 ? (
+                      environments.map(e => <option key={e.id} value={e.id}>{e.name}</option>)
+                    ) : (
+                      <option value="">Loading environments...</option>
+                    )}
+                  </select>
+                </div>
+                
+                <div className="control-group">
+                  <Bot size={18} color="var(--google-gray)" />
+                  <select 
+                    className="selector-transparent"
+                    value={currentAgent} 
+                    onChange={(e) => setCurrentAgent(e.target.value)}
+                  >
+                    {agents.length > 0 ? (
+                      agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)
+                    ) : (
+                      <option value="">Loading agents...</option>
+                    )}
+                  </select>
+                </div>
+              </div>
+
+              <div className="header-actions">
+                <button 
+                  className="icon-button" 
+                  onClick={() => setShowPortal(true)}
+                  title="Campaign Portal"
+                  style={{ marginRight: '8px' }}
+                >
+                  <Zap size={20} color="#1e8e3e" />
+                </button>
+                <button 
+                  className="activate-button" 
+                  onClick={() => setIsActivationOpen(true)}
+                  title="Launch Campaign"
+                >
+                  <Rocket size={16} />
+                  <span>Activate</span>
+                </button>
+                <div className="action-divider" />
+                <button className="icon-button" title="Data Reference" onClick={() => setIsDataOpen(true)}>
+                  <Database size={20} />
+                </button>
+                <button className="icon-button" title="Brand Settings" onClick={() => setIsSettingsOpen(true)}>
+                  <Settings size={20} />
+                </button>
+                <div className="user-avatar">
+                  HW
+                </div>
+              </div>
+            </header>
+
+            <Dashboard />
+          </main>
+
+          {/* Activation Modal */}
+          <ActivationModal 
+            isOpen={isActivationOpen}
+            onClose={() => setIsActivationOpen(false)}
+            strategy={state.brief_data}
+            segmentation={state.segments_data}
+            content={state.content_data}
+          />
+
+          {/* Settings Modal */}
+          <Modal 
+            isOpen={isSettingsOpen} 
+            onClose={() => setIsSettingsOpen(false)} 
+            title="Brand Settings & Context"
+            icon={<Settings size={20} />}
+          >
+            <div className="modal-section">
+              <h3>Company Profile</h3>
+              <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
+                <ReactMarkdown>{companyContext}</ReactMarkdown>
+              </div>
             </div>
-            
-            <div className="control-group">
-              <Bot size={18} color="var(--google-gray)" />
-              <select 
-                className="selector-transparent"
-                value={currentAgent} 
-                onChange={(e) => setCurrentAgent(e.target.value)}
-              >
-                {agents.length > 0 ? (
-                  agents.map(a => <option key={a.id} value={a.id}>{a.name}</option>)
-                ) : (
-                  <option value="">Loading agents...</option>
-                )}
-              </select>
+            <div className="modal-section">
+              <h3>Brand Guidelines</h3>
+              <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
+                <ReactMarkdown>{brandGuidelines}</ReactMarkdown>
+              </div>
             </div>
-          </div>
+          </Modal>
 
-          <div className="header-actions">
-            <button 
-              className="activate-button" 
-              onClick={() => setIsActivationOpen(true)}
-              title="Launch Campaign"
-            >
-              <Rocket size={16} />
-              <span>Activate</span>
-            </button>
-            <div className="action-divider" />
-            <button className="icon-button" title="Data Reference" onClick={() => setIsDataOpen(true)}>
-              <Database size={20} />
-            </button>
-            <button className="icon-button" title="Brand Settings" onClick={() => setIsSettingsOpen(true)}>
-              <Settings size={20} />
-            </button>
-            <div className="user-avatar">
-              HW
-            </div>
-          </div>
-        </header>
-
-        <Dashboard />
-      </main>
-
-      {/* Activation Modal */}
-      <ActivationModal 
-        isOpen={isActivationOpen}
-        onClose={() => setIsActivationOpen(false)}
-        strategy={state.brief_data}
-        segmentation={state.segments_data}
-        content={state.content_data}
-      />
-
-      {/* Settings Modal */}
-      <Modal 
-        isOpen={isSettingsOpen} 
-        onClose={() => setIsSettingsOpen(false)} 
-        title="Brand Settings & Context"
-        icon={<Settings size={20} />}
-      >
-        <div className="modal-section">
-          <h3>Company Profile</h3>
-          <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
-            <ReactMarkdown>{companyContext}</ReactMarkdown>
-          </div>
-        </div>
-        <div className="modal-section">
-          <h3>Brand Guidelines</h3>
-          <div className="markdown-body" style={{ fontSize: '0.9rem' }}>
-            <ReactMarkdown>{brandGuidelines}</ReactMarkdown>
-          </div>
-        </div>
-      </Modal>
-
-      {/* Data Reference Modal */}
-      <Modal 
-        isOpen={isDataOpen} 
-        onClose={() => setIsDataOpen(false)} 
-        title="Data Reference (BigQuery)"
-        icon={<Database size={20} />}
-      >
-        <div className="modal-section">
-          <h3>Marketing Data Schema</h3>
-          <p style={{ fontSize: '0.85rem', color: 'var(--google-gray)', marginBottom: '16px' }}>
-            The Crazy Furnishing Company dataset includes customer, product, and sales history.
-          </p>
-          <table className="schema-table">
-            <thead>
-              <tr>
-                <th>Table</th>
-                <th>Column</th>
-                <th>Type</th>
-                <th>Description</th>
-              </tr>
-            </thead>
-            <tbody>
-              {customerSchema && (Array.isArray(customerSchema) ? (
-                customerSchema.map(col => (
-                  <tr key={col.name}>
-                    <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>customer</td>
-                    <td style={{ fontWeight: 500 }}>{col.name}</td>
-                    <td><span className="type-tag">{col.type}</span></td>
-                    <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+          {/* Data Reference Modal */}
+          <Modal 
+            isOpen={isDataOpen} 
+            onClose={() => setIsDataOpen(false)} 
+            title="Data Reference (BigQuery)"
+            icon={<Database size={20} />}
+          >
+            <div className="modal-section">
+              <h3>Marketing Data Schema</h3>
+              <p style={{ fontSize: '0.85rem', color: 'var(--google-gray)', marginBottom: '16px' }}>
+                The Crazy Furnishing Company dataset includes customer, product, and sales history.
+              </p>
+              <table className="schema-table">
+                <thead>
+                  <tr>
+                    <th>Table</th>
+                    <th>Column</th>
+                    <th>Type</th>
+                    <th>Description</th>
                   </tr>
-                ))
-              ) : (
-                Object.entries(customerSchema).map(([tableName, columns]) => (
-                  Array.isArray(columns) && columns.map(col => (
-                    <tr key={`${tableName}-${col.name}`}>
-                      <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>{tableName}</td>
-                      <td style={{ fontWeight: 500 }}>{col.name}</td>
-                      <td><span className="type-tag">{col.type}</span></td>
-                      <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
-                    </tr>
-                  ))
-                ))
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </Modal>
+                </thead>
+                <tbody>
+                  {customerSchema && (Array.isArray(customerSchema) ? (
+                    customerSchema.map(col => (
+                      <tr key={col.name}>
+                        <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>customer</td>
+                        <td style={{ fontWeight: 500 }}>{col.name}</td>
+                        <td><span className="type-tag">{col.type}</span></td>
+                        <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    Object.entries(customerSchema).map(([tableName, columns]) => (
+                      Array.isArray(columns) && columns.map(col => (
+                        <tr key={`${tableName}-${col.name}`}>
+                          <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>{tableName}</td>
+                          <td style={{ fontWeight: 500 }}>{col.name}</td>
+                          <td><span className="type-tag">{col.type}</span></td>
+                          <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+                        </tr>
+                      ))
+                    ))
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </Modal>
+        </>
+      )}
     </div>
   );
 };

@@ -76,7 +76,6 @@ async def get_company_context():
 async def get_brand_guidelines():
     """Fetch content generation guidelines."""
     try:
-        # Get project root (one level up from frontend folder)
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         path = os.path.join(root, "agents", "marketing_agent", "brand_guidelines.md")
         with open(path, "r") as f:
@@ -89,7 +88,6 @@ async def get_brand_guidelines():
 async def get_customer_schema():
     """Fetch BigQuery customer table schema."""
     try:
-        # Get project root
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         path = os.path.join(root, "agents", "marketing_agent", "marketing_schema.json")
         with open(path, "r") as f:
@@ -120,7 +118,6 @@ async def activate_campaign(request: Request):
         conn.commit()
         conn.close()
         
-        # Return success with deployment URL
         return {
             "status": "success", 
             "campaign_id": campaign_id, 
@@ -129,6 +126,27 @@ async def activate_campaign(request: Request):
     except Exception as e:
         print(f"Activation Error: {e}")
         return {"status": "error", "message": str(e)}
+
+@app.get("/api/activated-campaigns")
+async def list_activated_campaigns():
+    """Fetch all activated campaigns from the local database."""
+    try:
+        conn = sqlite3.connect('campaigns.db')
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute("SELECT id, name, created_at FROM campaigns ORDER BY created_at DESC")
+        rows = c.fetchall()
+        conn.close()
+        
+        return {
+            "campaigns": [
+                {"id": row["id"], "name": row["name"], "created_at": row["created_at"]}
+                for row in rows
+            ]
+        }
+    except Exception as e:
+        print(f"Error listing campaigns: {e}")
+        return {"error": str(e)}
 
 @app.get("/api/activated-campaigns/{campaign_id}")
 async def get_activated_campaign(campaign_id: str):
@@ -155,6 +173,20 @@ async def get_activated_campaign(campaign_id: str):
     except Exception as e:
         return {"error": str(e)}
 
+@app.delete("/api/activated-campaigns/{campaign_id}")
+async def delete_activated_campaign(campaign_id: str):
+    """Remove a campaign from the local database."""
+    try:
+        conn = sqlite3.connect('campaigns.db')
+        c = conn.cursor()
+        c.execute("DELETE FROM campaigns WHERE id = ?", (campaign_id,))
+        conn.commit()
+        conn.close()
+        return {"status": "success", "message": f"Campaign {campaign_id} deleted."}
+    except Exception as e:
+        print(f"Delete Error: {e}")
+        return {"status": "error", "message": str(e)}
+
 @app.post("/api/sessions")
 async def create_session(request: Request, env: str = Query("local")):
     """Create a new session explicitly for the environment."""
@@ -165,8 +197,6 @@ async def create_session(request: Request, env: str = Query("local")):
         print(f"Validation Error: No app_name provided for {env} session")
         return {"status": "error", "message": "No agent selected"}
         
-    print(f"Creating session for agent '{app_name}' in environment: {env}")
-    
     try:
         backend = get_backend_manager(env, CONFIG)
         if hasattr(backend, "create_session"):
@@ -184,13 +214,10 @@ async def proxy_chat(request: Request, env: str = Query("local")):
     app_name = body.get("app_name")
     
     if not app_name:
-        print(f"Validation Error: No app_name provided for {env} chat")
         async def error_generator():
             yield f"data: {{\"error\": \"No agent selected\"}}\n\n"
         return StreamingResponse(error_generator(), media_type="text/event-stream")
 
-    print(f"Routing chat request for agent '{app_name}' to environment: {env}")
-    
     try:
         backend = get_backend_manager(env, CONFIG)
         return StreamingResponse(
@@ -199,10 +226,8 @@ async def proxy_chat(request: Request, env: str = Query("local")):
         )
     except Exception as e:
         print(f"Chat error for {env}: {e}")
-        
         async def error_generator(error_msg: str):
             yield f"data: {{\"error\": \"{error_msg}\"}}\n\n"
-            
         return StreamingResponse(error_generator(str(e)), media_type="text/event-stream")
 
 @app.get("/")
@@ -211,5 +236,4 @@ async def read_index():
 
 if __name__ == "__main__":
     import uvicorn
-    # Use standard uvicorn run
     uvicorn.run(app, host="0.0.0.0", port=3000)
