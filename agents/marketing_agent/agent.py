@@ -1,4 +1,5 @@
 import os
+os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
 from typing import List, Dict, Any
 from pydantic import BaseModel, Field
 from google.adk import Agent
@@ -10,15 +11,18 @@ from agents.marketing_agent.company_context import COMPANY_CONTEXT
 
 # BigQuery table configuration for marketing data
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
+PROJECT_ID = os.getenv("PROJECT_ID", "marketing-agent-01-491314")
+DATASET_ID = os.getenv("DATASET_ID", "customer_data_furniture")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
-# Load table schema context for better query generation
-schema_path = os.path.join(os.path.dirname(__file__), "customer_schema.json")
+# Load marketing schema context for data-driven decisions
+schema_path = os.path.join(os.path.dirname(__file__), "marketing_schema.json")
 try:
     with open(schema_path, "r") as f:
-        CUSTOMER_SCHEMA = f.read()
+        MARKETING_SCHEMA = f.read()
 except Exception as e:
-    print(f"Warning: Could not load customer_schema.json: {e}")
-    CUSTOMER_SCHEMA = "Schema details unavailable."
+    print(f"Warning: Could not load marketing_schema.json: {e}")
+    MARKETING_SCHEMA = "Schema details unavailable."
 
 # Load brand guidelines for content agents
 brand_path = os.path.join(os.path.dirname(__file__), "brand_guidelines.md")
@@ -30,6 +34,16 @@ except Exception as e:
     BRAND_GUIDELINES = "Follow a professional and enthusiastic marketing tone."
 
 # --- Structured Output Schemas (The Blackboard) ---
+
+class BriefResult(BaseModel):
+    """Result of the campaign strategy/briefing phase."""
+    campaign_name: str = Field(description="Internal name for the campaign")
+    business_opportunity: str = Field(description="The data-driven insight that inspired this campaign")
+    primary_goal: str = Field(description="The main business objective (e.g. Reduce churn)")
+    target_audience_description: str = Field(description="High-level description of who we are targeting")
+    recommended_channels: List[str] = Field(description="List of channels (Email, SMS, Social)")
+    success_kpi: str = Field(description="The metric used to measure success")
+    recommended_products: List[str] = Field(description="List of product names to feature")
 
 class AnalysisResult(BaseModel):
     """Result of the data analysis phase."""
@@ -71,65 +85,97 @@ if bq_mcp_toolset:
 # Plugin for self-healing/retry on tool failures - specialized for BigQuery
 retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)
 
-# 1. Analysis Agent - Fetches and analyzes BigQuery data
+# 1. Analysis Agent - Fetches and analyzes BigQuery data (sales, inventory, customers)
 analysis_agent = Agent(
     name="analysis_agent",
-    model="gemini-2.5-flash",
-    instruction=f"""You are a data analyst at Crazy Furnishing Company. Your goal is to analyze customer data from the BigQuery table: {BQ_CUSTOMER_TABLE} using the provided tools.
+    model=MODEL_NAME,
+    instruction=f"""You are a data analyst at Crazy Furnishing Company. Your goal is to analyze customer, sales, and product data from BigQuery using the provided tools.
+    
+    IMPORTANT - DATA ACCESS:
+    - Customer Table: `{PROJECT_ID}.{DATASET_ID}.customer`
+    - Sales Table: `{PROJECT_ID}.{DATASET_ID}.sales`
+    - Products Table: `{PROJECT_ID}.{DATASET_ID}.products`
+    - Campaign History: `{PROJECT_ID}.{DATASET_ID}.campaign_history`
     
     GUIDELINES:
-    1. Focus on high-value metrics: Customer Lifetime Value (CLV), churn probability, and category affinities.
-    2. When you identify patterns (e.g., CLV by city, purchases over time), use the 'visualizations' field to store the raw data for the UI to graph.
-    3. Keep 'key_metrics' for high-level numbers.
-    4. Provide clear, actionable trends.
+    1. Focus on high-value patterns: CLV, churn risk, inventory levels, and historical campaign ROI.
+    2. Use the 'visualizations' field to store raw data for patterns. IMPORTANT: Keep datasets small (e.g., Top 10-15 rows max) to ensure fast processing.
+    3. Look for "Low Inventory" alerts in the products table to recommend "Back in Stock" or "Last Chance" campaigns.
+    4. Analyze 'campaign_history' to see which media types are working best.
     
-    Here is the table schema for your reference:
-    {CUSTOMER_SCHEMA}
+    Here is the full marketing schema for your reference:
+    {MARKETING_SCHEMA}
     
     CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     
-    EXIT CONDITION: Once you have gathered sufficient insights, format your output according to the AnalysisResult schema and terminate.
-    DO NOT suggest next steps or try to transfer to other agents.
+    EXIT CONDITION: Once you have gathered sufficient insights, format your final output strictly according to the AnalysisResult schema and terminate.
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
     """,
     tools=data_tools,
     output_schema=AnalysisResult,
     output_key="analysis_data",
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
-    description="Analyzes BigQuery data to find trends and insights."
+    description="Analyzes BigQuery data (sales, products, customers) to find trends and insights."
 )
 
-# 2. Segmentation Agent - Segments customers based on analysis
+# 2. Campaign Architect - Defines the strategy and brief
+campaign_architect = Agent(
+    name="campaign_architect",
+    model=MODEL_NAME,
+    instruction=f"""You are a Strategic Campaign Architect at Crazy Furnishing Company.
+    Your goal is to define the high-level strategy and "Brief" for a marketing campaign.
+    
+    STRATEGY RULES:
+    1. BLACKBOARD FIRST: Always check 'analysis_data' in the session state. If it contains sufficient insights, use them.
+    2. MINIMAL TOOLS: Do not perform broad analysis. If you need a specific data point (e.g. current stock of one item), perform ONE targeted query.
+    3. If complex analysis is missing, transfer to 'analysis_agent'.
+    4. BRAND ALIGNED: Ensure the brief reflects our quirky, enthusiastic brand identity.
+    5. RECOMMENDED OUTPUT: Suggest the best channel mix and specific product names (like SÏTZY, SLËËPY) to feature.
+    
+    Here is the marketing schema context:
+    {MARKETING_SCHEMA}
+    EXIT CONDITION: Once the strategy is defined, format your final output strictly according to the BriefResult schema and terminate.
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
+    """,
+    tools=data_tools,
+    output_schema=BriefResult,
+    output_key="brief_data",
+    disallow_transfer_to_peers=True,
+    disallow_transfer_to_parent=True,
+    description="Defines the campaign strategy, goals, and business opportunities."
+    )
+
+# 3. Segmentation Agent - Segments customers based on analysis and strategy
 segmentation_agent = Agent(
     name="segmentation_agent",
-    model="gemini-2.5-flash",
+    model=MODEL_NAME,
     instruction=f"""You are a segmentation expert at Crazy Furnishing Company. Your goal is to categorize 
-    customers into meaningful segments based on the insights provided in the session state (analysis_data).
+    customers into meaningful segments based on the insights provided in the session state (analysis_data) and the campaign brief (brief_data).
     
     Provide clear definitions and unique characteristics for each segment.
-    If you have access to BigQuery MCP tools (like execute_sql), use them to fetch additional data from the table {BQ_CUSTOMER_TABLE} if needed for more precise segmentation.
     
-    Here is the table schema for your reference:
-    {CUSTOMER_SCHEMA}
+    Here is the marketing schema for your reference:
+    {MARKETING_SCHEMA}
     
     CRITICAL: If a tool call returns an error, analyze the feedback, fix your request, and retry.
     
-    EXIT CONDITION: Once segments are defined, format your output according to the SegmentationResult schema and terminate.
-    DO NOT suggest next steps or try to transfer to other agents.
+    EXIT CONDITION: Once segments are defined, format your final output strictly according to the SegmentationResult schema and terminate.
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
     """,
     tools=data_tools,
     output_schema=SegmentationResult,
     output_key="segments_data",
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
-    description="Segments customers into marketing categories based on data."
+    description="Segments customers into marketing categories based on data and strategy."
 )
 
 
-# 3. Personalized Content Agent - Creates text-based marketing content
+# 4. Personalized Content Agent - Creates text-based marketing content
 content_agent = Agent(
     name="content_agent",
-    model="gemini-2.5-flash",
+    model=MODEL_NAME,
     instruction=f"""
     {BRAND_GUIDELINES}
     
@@ -138,7 +184,7 @@ content_agent = Agent(
     The tone should be engaging, enthusiastic, and quirky as per our guidelines.
     
     EXIT CONDITION: Once the content drafts are complete, format your output according to the ContentResult schema and terminate.
-    DO NOT suggest next steps or try to transfer to other agents.
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
     """,
     output_schema=ContentResult,
     output_key="content_data",
@@ -148,10 +194,10 @@ content_agent = Agent(
 )
 
 
-# 4. Reviewer Agent - Validates content against guidelines
+# 5. Reviewer Agent - Validates content against guidelines
 reviewer_agent = Agent(
     name="reviewer_agent",
-    model="gemini-2.5-flash",
+    model=MODEL_NAME,
     instruction=f"""
     {BRAND_GUIDELINES}
     
@@ -160,9 +206,7 @@ reviewer_agent = Agent(
     Reject and suggest fixes for any content that doesn't meet the standards.
     
     EXIT CONDITION: Once you have completed the review, format your output according to the ReviewResult schema and terminate.
-    - If correct, status must be 'VERIFIED'.
-    - If there are issues, status must be 'REJECTED' and feedback must be detailed.
-    DO NOT suggest next steps or try to transfer to other agents.
+    CRITICAL: Do NOT include any conversational text or preamble. Output ONLY the structured JSON.
     """,
     output_schema=ReviewResult,
     output_key="review_data",
@@ -171,10 +215,10 @@ reviewer_agent = Agent(
     description="Reviews marketing content against company brand guidelines."
 )
 
-# 5. Marketing Manager - The entry point for the user
+# 6. Marketing Manager - The entry point for the user
 root_agent = Agent(
     name="marketing_manager",
-    model="gemini-2.5-flash",
+    model=MODEL_NAME,
     instruction=f"""
     {COMPANY_CONTEXT}
     
@@ -182,21 +226,25 @@ root_agent = Agent(
     to deliver high-quality marketing outcomes. You manage the global state and decide which expert to call next.
     
     MANAGEMENT RULES:
-    1. DO NOT perform specialized tasks (analysis, segmentation, drafting, review) yourself.
-    2. ALWAYS check the session state (Blackboard) to see what work has already been completed.
-    3. Hub-and-Spoke: Sub-agents will return their results to you. Analyze their output before deciding the next step.
+    1. CONVERSATIONAL: For simple greetings (Hello, Hi) or non-marketing chat, respond yourself using our quirky brand voice. 
+    2. HUB-AND-SPOKE: Sub-agents return ONLY structured JSON. You are the only one who talks to the human.
+    3. PROACTIVE: When a sub-agent completes a task, ALWAYS acknowledge it to the user in a friendly way and suggest the next logical step (e.g. "The strategy is ready! Shall we move to customer segmentation?").
     
     WORKFLOW:
-    - If data needs to be explored or trends identified -> Transfer to analysis_agent.
-    - If analysis is done (`analysis_data` is present) but segments are missing -> Transfer to segmentation_agent.
-    - If segments are defined (`segments_data` is present) but content is missing -> Transfer to content_agent.
-    - If content is drafted (`content_data` is present) -> Transfer to reviewer_agent.
-    - If reviewer rejects content (`review_data.status` is 'REJECTED') -> Send feedback back to content_agent.
-    - If reviewer verifies content (`review_data.status` is 'VERIFIED') -> Present the final verified content to the user and conclude the task.
+    - User Request -> Analysis (if needed) -> Campaign Brief (Architect) -> Segmentation -> Content Creation -> Brand Review.
+    - If `analysis_data` is present but no `brief_data` -> Transfer to 'campaign_architect' to turn insights into strategy.
+    - If `brief_data` is present but no `segments_data` -> Transfer to 'segmentation_agent'.
+    - If `segments_data` is present but no `content_data` -> Transfer to 'content_agent'.
+    - If `content_data` is present -> Transfer to 'reviewer_agent'.
+    - If reviewer rejects -> Transfer back to 'content_agent' with feedback.
+    - If reviewer verifies -> Present the final verified content to the user and conclude.
     
     You are the only agent that speaks directly to the end-user.
     """,
-    sub_agents=[analysis_agent, segmentation_agent, content_agent, reviewer_agent]
+    sub_agents=[analysis_agent, segmentation_agent, content_agent, reviewer_agent, campaign_architect],
+    disallow_transfer_to_peers=False,
+    disallow_transfer_to_parent=False,
+    description="The main orchestrator for marketing campaigns at Crazy Furnishing Company."
 )
 
 if __name__ == "__main__":

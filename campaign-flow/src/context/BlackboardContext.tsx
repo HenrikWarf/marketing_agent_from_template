@@ -1,8 +1,19 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+export interface BriefData {
+  campaign_name: string;
+  business_opportunity: string;
+  primary_goal: string;
+  target_audience_description: string;
+  recommended_channels: string[];
+  success_kpi: string;
+  recommended_products: string[];
+}
+
 export interface AnalysisData {
   summary: string;
   key_metrics: Record<string, any>;
+  visualizations: any[];
   trends: string[];
   raw_query_used: string;
 }
@@ -37,6 +48,7 @@ export interface ReviewData {
 }
 
 interface BlackboardState {
+  brief_data: BriefData | null;
   analysis_data: AnalysisData | null;
   segments_data: SegmentationData | null;
   content_data: ContentData | null;
@@ -53,6 +65,7 @@ const BlackboardContext = createContext<BlackboardContextType | undefined>(undef
 
 export const BlackboardProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [state, setState] = useState<BlackboardState>({
+    brief_data: null,
     analysis_data: null,
     segments_data: null,
     content_data: null,
@@ -65,6 +78,7 @@ export const BlackboardProvider: React.FC<{ children: ReactNode }> = ({ children
 
   const resetState = () => {
     setState({
+      brief_data: null,
       analysis_data: null,
       segments_data: null,
       content_data: null,

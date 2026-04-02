@@ -1,0 +1,104 @@
+.brief-container {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.campaign-banner {
+  background: var(--google-blue);
+  color: white;
+  padding: 12px 20px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.2);
+}
+
+.campaign-name-text {
+  font-weight: 600;
+  font-size: 1.1rem;
+}
+
+.brief-section {
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 12px;
+  border: 1px solid #e0e2e6;
+}
+
+.brief-section-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+  color: var(--google-gray);
+}
+
+.brief-section h4 {
+  margin: 0;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 700;
+}
+
+.brief-section p {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.5;
+  color: var(--text-primary);
+}
+
+.brief-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+}
+
+.kpi-tag {
+  display: inline-block;
+  margin-top: 8px;
+  background: #e8f0fe;
+  color: var(--google-blue);
+  padding: 4px 10px;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.tag-cloud {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.product-tag {
+  background: #fff;
+  border: 1px solid var(--border-color);
+  padding: 4px 12px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.channel-list {
+  display: flex;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.channel-pill {
+  background: #f1f3f4;
+  padding: 6px 16px;
+  border-radius: 100px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.opportunity {
+  border-left: 4px solid #f9ab00;
+  background: #fff8e1;
+}

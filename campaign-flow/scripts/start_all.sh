@@ -27,20 +27,33 @@ lsof -ti:8000,3000,5173 | xargs kill -9 2>/dev/null
 sleep 1
 
 echo "Starting ADK Agent Backend (Port 8000)..."
-adk api_server agents/ --port 8000 --auto_create_session &
+adk api_server agents/ --port 8000 --auto_create_session > adk_server.log 2>&1 &
 ADK_PID=$!
 
 # Wait for ADK to be ready
-echo "Waiting for ADK..."
-sleep 4
+echo "Waiting for ADK to initialize..."
+for i in {1..10}; do
+    if curl -s http://localhost:8000/list-apps > /dev/null; then
+        echo "ADK is ready."
+        break
+    fi
+    sleep 1
+done
 
 echo "Starting CampaignFlow Proxy (FastAPI Port 3000)..."
-PYTHONPATH="$ROOT_DIR" python3 -m frontend.app &
+export PYTHONPATH="$ROOT_DIR"
+python3 -m frontend.app > proxy_server.log 2>&1 &
 BACKEND_PID=$!
 
 # Wait for Proxy to be ready
-echo "Waiting for Proxy..."
-sleep 3
+echo "Waiting for Proxy to initialize..."
+for i in {1..10}; do
+    if curl -s http://localhost:3000/api/environments > /dev/null; then
+        echo "Proxy is ready."
+        break
+    fi
+    sleep 1
+done
 
 echo "Starting CampaignFlow UI (React Port 5173)..."
 cd campaign-flow && npm run dev &
@@ -48,8 +61,8 @@ FRONTEND_PID=$!
 
 echo "=========================================="
 echo "CampaignFlow is now running!"
-echo "ADK Backend: http://localhost:8000"
-echo "Proxy API:   http://localhost:3000"
+echo "ADK Backend: http://localhost:8000 (Log: adk_server.log)"
+echo "Proxy API:   http://localhost:3000 (Log: proxy_server.log)"
 echo "Frontend UI: http://localhost:5173"
 echo "=========================================="
 

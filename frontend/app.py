@@ -89,7 +89,7 @@ async def get_customer_schema():
     try:
         # Get project root
         root = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        path = os.path.join(root, "agents", "marketing_agent", "customer_schema.json")
+        path = os.path.join(root, "agents", "marketing_agent", "marketing_schema.json")
         with open(path, "r") as f:
             return {"schema": json.load(f)}
     except Exception as e:
@@ -100,7 +100,13 @@ async def get_customer_schema():
 async def create_session(request: Request, env: str = Query("local")):
     """Create a new session explicitly for the environment."""
     body = await request.json()
-    print(f"Creating session for environment: {env}")
+    app_name = body.get("app_name")
+    
+    if not app_name:
+        print(f"Validation Error: No app_name provided for {env} session")
+        return {"status": "error", "message": "No agent selected"}
+        
+    print(f"Creating session for agent '{app_name}' in environment: {env}")
     
     try:
         backend = get_backend_manager(env, CONFIG)
@@ -116,7 +122,15 @@ async def create_session(request: Request, env: str = Query("local")):
 async def proxy_chat(request: Request, env: str = Query("local")):
     """Route the chat request to the selected environment backend."""
     body = await request.json()
-    print(f"Routing chat request to environment: {env}")
+    app_name = body.get("app_name")
+    
+    if not app_name:
+        print(f"Validation Error: No app_name provided for {env} chat")
+        async def error_generator():
+            yield f"data: {{\"error\": \"No agent selected\"}}\n\n"
+        return StreamingResponse(error_generator(), media_type="text/event-stream")
+
+    print(f"Routing chat request for agent '{app_name}' to environment: {env}")
     
     try:
         backend = get_backend_manager(env, CONFIG)

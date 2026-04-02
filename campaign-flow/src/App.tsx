@@ -5,6 +5,7 @@ import ChatInterface from './components/ChatInterface';
 import BlackboardCard from './components/BlackboardCard';
 import PlaceholderCard from './components/PlaceholderCard';
 import Modal from './components/Modal';
+import BriefPanel from './components/BriefPanel';
 import AnalysisPanel from './components/AnalysisPanel';
 import SegmentationPanel from './components/SegmentationPanel';
 import ContentPanel from './components/ContentPanel';
@@ -20,17 +21,19 @@ import {
   Settings,
   LayoutGrid,
   Sparkles,
-  Database
+  Database,
+  ClipboardList
 } from 'lucide-react';
 
-type ViewType = 'analysis' | 'segmentation' | 'content' | 'review' | 'grid';
+type ViewType = 'brief' | 'analysis' | 'segmentation' | 'content' | 'review' | 'grid';
 
 const Dashboard: React.FC = () => {
   const { state } = useBlackboard();
-  const [activeView, setActiveView] = useState<ViewType>('analysis');
+  const [activeView, setActiveView] = useState<ViewType>('brief');
   const [isGridView, setIsGridView] = useState(false);
   
   const seenDataRef = useRef<Record<string, string | null>>({
+    brief: null,
     analysis: null,
     segmentation: null,
     content: null,
@@ -48,6 +51,7 @@ const Dashboard: React.FC = () => {
       }
     };
 
+    checkUpdate('brief_data', 'brief');
     checkUpdate('analysis_data', 'analysis');
     checkUpdate('segments_data', 'segmentation');
     checkUpdate('content_data', 'content');
@@ -55,6 +59,7 @@ const Dashboard: React.FC = () => {
   }, [state]);
 
   const VIEWS = [
+    { id: 'brief', title: 'Campaign Brief', icon: ClipboardList, color: '#1a73e8', data: state.brief_data, panel: BriefPanel, msg: "Start by defining your campaign strategy and goals." },
     { id: 'analysis', title: 'Data Analysis', icon: BarChart3, color: 'var(--analysis-color)', data: state.analysis_data, panel: AnalysisPanel, msg: "Connect to BigQuery to begin your marketing analysis." },
     { id: 'segmentation', title: 'Segmentation', icon: Users, color: 'var(--segment-color)', data: state.segments_data, panel: SegmentationPanel, msg: "Identify target audience segments based on data insights." },
     { id: 'content', title: 'Content Creation', icon: PenTool, color: 'var(--content-color)', data: state.content_data, panel: ContentPanel, msg: "Generate personalized marketing copy for your segments." },
@@ -185,25 +190,39 @@ const App: React.FC = () => {
 
   useEffect(() => {
     if (!currentEnv) return;
+    setAgents([]); // Clear agents while loading
+    setCurrentAgent(''); // Reset current agent
+    
     fetch(`/api/agents?env=${currentEnv}`)
       .then(res => res.ok ? res.json() : null)
       .then(data => {
-        if (data) {
-          setAgents(data.agents || []);
-          if (data.agents?.length > 0) setCurrentAgent(data.agents[0].id);
+        if (data && data.agents && data.agents.length > 0) {
+          setAgents(data.agents);
+          setCurrentAgent(data.agents[0].id);
+        } else {
+          setAgents([]);
+          setCurrentAgent('');
         }
       });
   }, [currentEnv]);
 
   const handleNewSession = async () => {
-    if (!currentAgent) return;
-    const res = await fetch(`/api/sessions?env=${currentEnv}`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ app_name: currentAgent, user_id: 'user-local' })
-    });
-    const data = await res.json();
-    if (data.session_id) setSessionId(data.session_id);
+    if (!currentAgent) {
+      console.warn("UI: No agent selected, skipping session creation.");
+      return;
+    }
+    
+    try {
+      const res = await fetch(`/api/sessions?env=${currentEnv}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ app_name: currentAgent, user_id: 'user-local' })
+      });
+      const data = await res.json();
+      if (data.session_id) setSessionId(data.session_id);
+    } catch (e) {
+      console.error("UI: Session creation failed", e);
+    }
   };
 
   useEffect(() => {
@@ -219,6 +238,9 @@ const App: React.FC = () => {
             agentId={currentAgent} 
             sessionId={sessionId}
             onNewSession={handleNewSession}
+            onDataReceived={(type) => {
+              console.log("UI: Auto-switching view to", type);
+            }}
           />
         </aside>
         
@@ -272,7 +294,6 @@ const App: React.FC = () => {
           <Dashboard />
         </main>
 
-        {/* Settings Modal */}
         <Modal 
           isOpen={isSettingsOpen} 
           onClose={() => setIsSettingsOpen(false)} 
@@ -293,7 +314,6 @@ const App: React.FC = () => {
           </div>
         </Modal>
 
-        {/* Data Reference Modal */}
         <Modal 
           isOpen={isDataOpen} 
           onClose={() => setIsDataOpen(false)} 
@@ -301,25 +321,40 @@ const App: React.FC = () => {
           icon={<Database size={20} />}
         >
           <div className="modal-section">
-            <h3>Customer Table Schema</h3>
+            <h3>Marketing Data Schema</h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--google-gray)', marginBottom: '16px' }}>
-              This schema is used by the Analysis and Segmentation agents to perform SQL queries.
+              The Crazy Furnishing Company dataset includes customer, product, and sales history.
             </p>
             <table className="schema-table">
               <thead>
                 <tr>
+                  <th>Table</th>
                   <th>Column</th>
                   <th>Type</th>
                   <th>Description</th>
                 </tr>
               </thead>
               <tbody>
-                {customerSchema.map(col => (
-                  <tr key={col.name}>
-                    <td style={{ fontWeight: 500 }}>{col.name}</td>
-                    <td><span className="type-tag">{col.type}</span></td>
-                    <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
-                  </tr>
+                {customerSchema && (Array.isArray(customerSchema) ? (
+                  customerSchema.map(col => (
+                    <tr key={col.name}>
+                      <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>customer</td>
+                      <td style={{ fontWeight: 500 }}>{col.name}</td>
+                      <td><span className="type-tag">{col.type}</span></td>
+                      <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+                    </tr>
+                  ))
+                ) : (
+                  Object.entries(customerSchema).map(([tableName, columns]) => (
+                    Array.isArray(columns) && columns.map(col => (
+                      <tr key={`${tableName}-${col.name}`}>
+                        <td style={{ opacity: 0.6, fontSize: '0.75rem', verticalAlign: 'top', paddingTop: '14px' }}>{tableName}</td>
+                        <td style={{ fontWeight: 500 }}>{col.name}</td>
+                        <td><span className="type-tag">{col.type}</span></td>
+                        <td style={{ color: 'var(--google-gray)' }}>{col.description}</td>
+                      </tr>
+                    ))
+                  ))
                 ))}
               </tbody>
             </table>

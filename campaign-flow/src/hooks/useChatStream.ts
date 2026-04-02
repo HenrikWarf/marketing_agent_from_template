@@ -68,6 +68,8 @@ export const useChatStream = () => {
         })
       });
 
+      if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+
       const reader = response.body?.getReader();
       const decoder = new TextDecoder();
       let fullText = '';
@@ -83,10 +85,11 @@ export const useChatStream = () => {
         try {
           const potentialJson = jsonMatch[0];
           const parsed = JSON.parse(potentialJson);
-          const dataKeys = ['summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
+          const dataKeys = ['campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
           
           if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
-            if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
+            if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
+            else if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
             else if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
             else if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
             else if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('review'); }
@@ -146,25 +149,27 @@ export const useChatStream = () => {
               // 2. Blackboard State
               if (data.session_state) {
                 updateState(data.session_state);
+                if (data.session_state.brief_data) onDataReceived?.('brief');
                 if (data.session_state.analysis_data) onDataReceived?.('analysis');
                 if (data.session_state.segments_data) onDataReceived?.('segmentation');
                 if (data.session_state.content_data) onDataReceived?.('content');
                 if (data.session_state.review_data) onDataReceived?.('review');
               }
 
-              // 3. Content Streaming
+              // 3. Handle streaming content
               if (data.content && data.content.parts) {
                 const chunkText = data.content.parts.map(p => p.text || '').join('');
                 if (chunkText) {
-                  if (chunkText.length > fullText.length) {
+                  // DEDUPLICATION STRATEGY
+                  if (chunkText.startsWith(fullText)) {
                     fullText = chunkText;
-                  } else {
+                  } else if (!fullText.endsWith(chunkText)) {
                     fullText += chunkText;
                   }
 
                   const { isMatch, content } = processJsonInText(fullText);
                   let finalDisplay = content;
-                  
+
                   if (!isMatch && fullText.trim().startsWith('{') && fullText.trim().length > 5) {
                     finalDisplay = "...";
                   }
