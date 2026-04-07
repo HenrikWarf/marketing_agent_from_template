@@ -192,6 +192,10 @@
 }
 
 /* Content Reveal */
+.card.empty .card-content-wrapper {
+  display: none;
+}
+
 .card-content-wrapper {
   display: grid;
   grid-template-rows: 0fr;
