@@ -2,6 +2,7 @@ import os
 import json
 import httpx
 import vertexai
+import enum
 from typing import AsyncGenerator, Dict, Any, List
 
 class BaseBackend:
@@ -25,9 +26,11 @@ class LocalBackend(BaseBackend):
                 if response.status_code == 200:
                     data = response.json()
                     if data:
+                        # Filter out known utility/shared directories that aren't agents
                         return [
                             {"id": name, "name": name.replace("_", " ").title()}
                             for name in data
+                            if name not in ["shared", "app_utils", "shared_tools"]
                         ]
         except Exception as e:
             print(f"LocalBackend list_agents error: {e}")
@@ -76,7 +79,24 @@ class LocalBackend(BaseBackend):
                         return
 
                     async for line in response.aiter_lines():
-                        if line:
+                        if line.startswith("data: "):
+                            try:
+                                raw_data = line[6:]
+                                if raw_data == "[DONE]":
+                                    yield f"{line}\n\n"
+                                    continue
+                                    
+                                data = json.loads(raw_data)
+                                
+                                # If the ADK server provides session_state, ensure it's passed through
+                                # Some versions might wrap it or put it in different places
+                                if "session_state" not in data and "state" in data:
+                                    data["session_state"] = data["state"]
+                                    
+                                yield f"data: {json.dumps(data)}\n\n"
+                            except Exception:
+                                yield f"{line}\n\n"
+                        elif line:
                             yield f"{line}\n\n"
         except Exception as e:
             yield f"data: {{\"error\": \"Local proxy error: {str(e)}\"}}\n\n"
@@ -89,13 +109,24 @@ class RemoteBackend(BaseBackend):
         self._engine = None
         self._client = None
         
-        # Initialize vertexai for this project/location
-        vertexai.init(project=project, location=location)
+        # Initialize vertexai safely
+        try:
+            if project:
+                vertexai.init(project=project, location=location)
+                print(f"Vertex AI initialized for project: {project}")
+            else:
+                print("Warning: GOOGLE_CLOUD_PROJECT not set, skipping vertexai.init")
+        except Exception as e:
+            print(f"Error during vertexai.init: {e}")
 
     def _get_engine(self):
         if not self._engine:
-            self._client = vertexai.Client(project=self.project, location=self.location)
-            self._engine = self._client.agent_engines.get(name=self.resource_name)
+            try:
+                self._client = vertexai.Client(project=self.project, location=self.location)
+                self._engine = self._client.agent_engines.get(name=self.resource_name)
+            except Exception as e:
+                print(f"Error getting Agent Engine: {e}")
+                raise e
         return self._engine
 
     async def list_agents(self) -> List[Dict[str, str]]:
@@ -190,21 +221,31 @@ class RemoteBackend(BaseBackend):
                 async for c in generator:
                     yield c
 
+            class DefaultEncoder(json.JSONEncoder):
+                def default(self, obj):
+                    if hasattr(obj, "model_dump"):
+                        return obj.model_dump()
+                    if hasattr(obj, "to_dict"):
+                        return obj.to_dict()
+                    # Handle Enums
+                    import enum
+                    if isinstance(obj, enum.Enum):
+                        return obj.value
+                    return str(obj)
+
             async for chunk in combined_stream():
-                print(f"DEBUG: Remote chunk type: {type(chunk)}")
-                # Map the chunk to the SSE format expected by the UI
-                # UI expects data: {"content": {"parts": [{"text": "..."}]}}
-                
-                # SDK might return Content objects or dicts depending on how it's called
-                if hasattr(chunk, "content"):
-                    # If it's a Content object
-                    content_dict = {"role": chunk.role, "parts": [{"text": p.text} for p in chunk.parts if hasattr(p, "text")]}
-                    yield f"data: {json.dumps({'content': content_dict})}\n\n"
+                # ADK Event objects or dicts
+                if hasattr(chunk, "model_dump"):
+                    yield f"data: {json.dumps(chunk.model_dump(), cls=DefaultEncoder)}\n\n"
+                elif hasattr(chunk, "to_dict"):
+                    yield f"data: {json.dumps(chunk.to_dict(), cls=DefaultEncoder)}\n\n"
                 elif isinstance(chunk, dict):
-                    # ADK usually returns dicts when called via the raw execution API
-                    # The format is often already the event dict
-                    if "content" in chunk:
-                        yield f"data: {json.dumps(chunk)}\n\n"
+                    # Ensure we pass through metadata for breadcrumbs if it's there
+                    metadata_keys = ["agent_name", "agentName", "tool_call", "toolCall", "tool_calls", "toolCalls", "tool_response", "toolResponse", "tool_call_result", "toolCallResult"]
+                    if any(k in chunk for k in metadata_keys):
+                        yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
+                    elif "content" in chunk:
+                        yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
                     elif "text" in chunk:
                         # Sometimes it's just a text chunk
                         yield f"data: {json.dumps({'content': {'parts': [{'text': chunk['text']}]}})}\n\n"
@@ -218,7 +259,6 @@ class RemoteBackend(BaseBackend):
                     # Try to serialize whatever it is
                     yield f"data: {json.dumps({'content': {'parts': [{'text': str(chunk)}]}})}\n\n"
 
-                    
         except Exception as e:
             import traceback
             traceback.print_exc()
