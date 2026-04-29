@@ -4,6 +4,8 @@ CampaignFlow is a professional, high-fidelity marketing orchestration platform b
 
 ## 🏗 Architectural Overview
 
+![CampaignFlow Architecture](./nanobanana-output/editremove_the_connection_line_d.png)
+
 The application follows a **Hub-and-Spoke** orchestration model, layered with **Sequential Agent Pipelines** for specialized tasks.
 
 ### 1. The "Blackboard" State
