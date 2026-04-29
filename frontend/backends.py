@@ -2,6 +2,7 @@ import os
 import json
 import httpx
 import vertexai
+import enum
 from typing import AsyncGenerator, Dict, Any, List
 
 class BaseBackend:
@@ -78,7 +79,24 @@ class LocalBackend(BaseBackend):
                         return
 
                     async for line in response.aiter_lines():
-                        if line:
+                        if line.startswith("data: "):
+                            try:
+                                raw_data = line[6:]
+                                if raw_data == "[DONE]":
+                                    yield f"{line}\n\n"
+                                    continue
+                                    
+                                data = json.loads(raw_data)
+                                
+                                # If the ADK server provides session_state, ensure it's passed through
+                                # Some versions might wrap it or put it in different places
+                                if "session_state" not in data and "state" in data:
+                                    data["session_state"] = data["state"]
+                                    
+                                yield f"data: {json.dumps(data)}\n\n"
+                            except Exception:
+                                yield f"{line}\n\n"
+                        elif line:
                             yield f"{line}\n\n"
         except Exception as e:
             yield f"data: {{\"error\": \"Local proxy error: {str(e)}\"}}\n\n"
@@ -91,13 +109,24 @@ class RemoteBackend(BaseBackend):
         self._engine = None
         self._client = None
         
-        # Initialize vertexai for this project/location
-        vertexai.init(project=project, location=location)
+        # Initialize vertexai safely
+        try:
+            if project:
+                vertexai.init(project=project, location=location)
+                print(f"Vertex AI initialized for project: {project}")
+            else:
+                print("Warning: GOOGLE_CLOUD_PROJECT not set, skipping vertexai.init")
+        except Exception as e:
+            print(f"Error during vertexai.init: {e}")
 
     def _get_engine(self):
         if not self._engine:
-            self._client = vertexai.Client(project=self.project, location=self.location)
-            self._engine = self._client.agent_engines.get(name=self.resource_name)
+            try:
+                self._client = vertexai.Client(project=self.project, location=self.location)
+                self._engine = self._client.agent_engines.get(name=self.resource_name)
+            except Exception as e:
+                print(f"Error getting Agent Engine: {e}")
+                raise e
         return self._engine
 
     async def list_agents(self) -> List[Dict[str, str]]:

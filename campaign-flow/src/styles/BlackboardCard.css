@@ -1,0 +1,240 @@
+.card {
+  background: var(--surface-color);
+  border-radius: 12px;
+  border: 1px solid #e0e2e6;
+  display: flex;
+  flex-direction: column;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  overflow: hidden;
+  height: min-content;
+  position: relative;
+  min-height: 80px;
+}
+
+/* Grid View specific sizing */
+.dashboard-grid .card {
+  min-height: 220px;
+  height: 100%;
+}
+
+.dashboard-grid .card-content-wrapper {
+  max-height: 500px;
+}
+
+/* Elevation & Hover states */
+.card.minimized {
+  background: #fdfdfd;
+}
+
+.card.populated.minimized:hover {
+  background: white;
+  border-color: var(--accent-color);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+  cursor: pointer;
+}
+
+.card.expanded {
+  background: white;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  border-color: #d1d4d9;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Left Accent Strip */
+.card.populated.expanded::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 4px;
+  background-color: var(--accent-color);
+  z-index: 5;
+}
+
+.card-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 20px;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.header-main {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.icon-box {
+  width: 36px;
+  height: 36px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.03);
+  color: #80868b;
+  transition: all 0.3s ease;
+}
+
+.card.populated .icon-box {
+  background-color: color-mix(in srgb, var(--accent-color), transparent 90%);
+  color: var(--accent-color);
+}
+
+.title-area {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-title {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: #1f1f1f;
+  letter-spacing: -0.01em;
+}
+
+.updated-timestamp {
+  font-size: 0.7rem;
+  color: #80868b;
+  margin-top: 4px;
+}
+
+.header-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.status-pill {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: #e6f4ea;
+  color: #137333;
+  border-radius: 100px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.status-dot-inner {
+  width: 6px;
+  height: 6px;
+  background: currentColor;
+  border-radius: 50%;
+}
+
+.chevron-box {
+  color: #5f6368;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.chevron-box.rotated {
+  transform: rotate(90deg);
+}
+
+/* Empty State Styling */
+.empty-state-container {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: #fcfcfc;
+  opacity: 0.6;
+}
+
+.empty-icon-ghost {
+  color: #dadce0;
+  margin-bottom: 12px;
+}
+
+.empty-message {
+  font-size: 0.8rem;
+  color: #80868b;
+  text-align: center;
+  margin: 0 0 16px 0;
+  max-width: 160px;
+  line-height: 1.4;
+}
+
+.empty-progress-track {
+  width: 40px;
+  height: 2px;
+  background: #f1f3f4;
+  border-radius: 2px;
+  position: relative;
+  overflow: hidden;
+}
+
+.empty-progress-dot {
+  width: 12px;
+  height: 100%;
+  background: #dadce0;
+  position: absolute;
+  left: 0;
+  animation: progress-slide 2s infinite ease-in-out;
+}
+
+@keyframes progress-slide {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(350%); }
+}
+
+/* Content Reveal */
+.card.empty .card-content-wrapper {
+  display: none;
+}
+
+.card-content-wrapper {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 0.4s ease, opacity 0.3s ease;
+  opacity: 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.card.expanded .card-content-wrapper {
+  display: flex;
+  flex-direction: column;
+}
+
+.card-content-wrapper.show {
+  grid-template-rows: 1fr;
+  opacity: 1;
+}
+
+.card-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+}
+
+.content-inner {
+  padding: 4px 20px 20px 20px;
+  border-top: 1px solid #f1f3f4;
+  margin-top: -1px;
+  flex: 1;
+}
+
+/* Populated animation pulse */
+@keyframes highlight-fade {
+  0% { background-color: white; }
+  20% { background-color: color-mix(in srgb, var(--accent-color), transparent 95%); }
+  100% { background-color: white; }
+}
+
+.card.populated.expanded {
+  animation: highlight-fade 2s ease-out forwards;
+}

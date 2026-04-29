@@ -1,0 +1,81 @@
+{
+  "eval_set_id": "core_marketing_workflow",
+  "name": "Core Marketing Workflow",
+  "description": "Modular test of the 5 key marketing stages.",
+  "eval_cases": [
+    {
+      "eval_id": "step_1_analysis",
+      "conversation": [
+        {
+          "invocation_id": "inv_1",
+          "user_content": { "parts": [{ "text": "How was our revenue in the last 30 days?" }] },
+          "final_response": { "role": "model", "parts": [{ "text": "{\"summary\": \"...\"}" }] },
+          "intermediate_data": {
+            "tool_uses": [{ "name": "execute_sql_readonly", "args": { "projectId": "marketing-agent-01-491314" } }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user", "state": {} }
+    },
+    {
+      "eval_id": "step_2_recommend",
+      "conversation": [
+        {
+          "invocation_id": "inv_2",
+          "user_content": { "parts": [{ "text": "Suggest some campaign ideas based on current trends." }] },
+          "final_response": { "role": "model", "parts": [{ "text": "{\"recommendations\": [...]}" }] },
+          "intermediate_data": {
+            "tool_uses": [{ "name": "execute_sql_readonly", "args": { "projectId": "marketing-agent-01-491314" } }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user", "state": {} }
+    },
+    {
+      "eval_id": "step_3_strategy",
+      "conversation": [
+        {
+          "invocation_id": "inv_3",
+          "user_content": { "parts": [{ "text": "Create a brief for an Outdoor campaign." }] },
+          "final_response": { "role": "model", "parts": [{ "text": "{\"segments\": [...]}" }] },
+          "intermediate_data": {
+            "tool_uses": [{ "name": "execute_sql_readonly", "args": { "projectId": "marketing-agent-01-491314" } }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user", "state": {} }
+    },
+    {
+      "eval_id": "step_4_content",
+      "conversation": [
+        {
+          "invocation_id": "inv_4",
+          "user_content": { "parts": [{ "text": "Generate content for the Outdoor segments." }] },
+          "final_response": { "role": "model", "parts": [{ "text": "{\"content_drafts\": [...]}" }] },
+          "intermediate_data": {
+            "tool_uses": [{ "name": "transfer_to_agent", "args": { "agent_name": "content_pipeline" } }]
+          }
+        }
+      ],
+      "session_input": { 
+        "app_name": "marketing_agent", 
+        "user_id": "eval_user", 
+        "state": { "segments_data": { "segments": [{"name": "Outdoor", "count": 100}] } } 
+      }
+    },
+    {
+      "eval_id": "step_5_review",
+      "conversation": [
+        {
+          "invocation_id": "inv_5",
+          "user_content": { "parts": [{ "text": "Review this email draft: 'Buy now for crazy savings!'" }] },
+          "final_response": { "role": "model", "parts": [{ "text": "{\"status\": \"VERIFIED\"}" }] },
+          "intermediate_data": {
+            "tool_uses": [{ "name": "transfer_to_agent", "args": { "agent_name": "content_pipeline" } }]
+          }
+        }
+      ],
+      "session_input": { "app_name": "marketing_agent", "user_id": "eval_user", "state": {} }
+    }
+  ]
+}
