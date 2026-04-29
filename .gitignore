@@ -15,7 +15,7 @@ session.db
 .requirements.txt
 
 # Media/Diagrams
-nanobanana-output/
+# nanobanana-output/
 
 # Terraform
 .terraform/
