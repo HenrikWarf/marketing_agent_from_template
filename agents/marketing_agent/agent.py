@@ -1,6 +1,6 @@
 import os
 os.environ["GOOGLE_CLOUD_LOCATION"] = "global"
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 from pydantic import BaseModel, Field
 from google.adk import Agent
 from google.adk.agents import SequentialAgent
@@ -14,7 +14,7 @@ from agents.marketing_agent.company_context import COMPANY_CONTEXT
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
 PROJECT_ID = os.getenv("PROJECT_ID", "marketing-agent-01-491314")
 DATASET_ID = os.getenv("DATASET_ID", "customer_data_furniture")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-3-flash-preview")
 
 # Load marketing schema context
 schema_path = os.path.join(os.path.dirname(__file__), "marketing_schema.json")
@@ -61,13 +61,22 @@ class BriefResult(BaseModel):
     success_kpi: str = Field(description="The metric used to measure success")
     recommended_products: List[str] = Field(description="List of product names to feature")
 
+class VisualizationItem(BaseModel):
+    """A single chart or table data block."""
+    title: str = Field(description="Title of the chart or table")
+    type: str = Field(description="Must be 'bar', 'line', or 'table'")
+    data: List[Dict[str, Any]] = Field(description="The actual data rows from the tool result")
+
 class AnalysisResult(BaseModel):
     """Result of the data analysis phase."""
     summary: str = Field(description="Executive summary of findings")
     key_metrics: Dict[str, Any] = Field(description="Important single-value metrics")
-    visualizations: List[Dict[str, Any]] = Field(default_factory=list)
-    trends: List[str] = Field(description="Identified trends in the data")
-    raw_query_used: str = Field(description="The SQL query produced")
+    visualizations: List[VisualizationItem] = Field(
+        default_factory=list,
+        description="Data specifically for charts and tables."
+    )
+    trends: Optional[List[str]] = Field(default_factory=list, description="Identified trends in the data")
+    raw_query_used: Optional[str] = Field(default="", description="The SQL query produced")
 
 class SegmentationResult(BaseModel):
     """Result of the customer segmentation phase."""
@@ -101,11 +110,29 @@ if bq_mcp_toolset:
 
 retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)
 
+async def after_tool_wrapper(tool, args, tool_context, tool_response):
+    """Wrapper to map ADK callback arguments to retry_plugin names."""
+    return await retry_plugin.after_tool_callback(
+        tool=tool,
+        tool_args=args,
+        tool_context=tool_context,
+        result=tool_response
+    )
+
+async def on_tool_error_wrapper(tool, args, tool_context, error):
+    """Wrapper to map ADK callback arguments to retry_plugin names."""
+    return await retry_plugin.on_tool_error_callback(
+        tool=tool,
+        tool_args=args,
+        tool_context=tool_context,
+        error=error
+    )
+
 # 1. Analysis Agent - General Purpose Explorer
 analysis_agent = Agent(
     name="analysis_agent",
     model=MODEL_NAME,
-    instruction=f"""You are a data analyst at Crazy Furnishing Company. Analyze BigQuery data using the tools.
+    instruction=f"""You are a data analyst at Crazy Furnishing Company. Your goal is to answer marketing and data questions using BigQuery.
     
     IMPORTANT - DATA ACCESS:
     - Customers: `{PROJECT_ID}.{DATASET_ID}.customer`
@@ -114,19 +141,34 @@ analysis_agent = Agent(
     - Campaign History: `{PROJECT_ID}.{DATASET_ID}.campaign_history`
     
     GUIDELINES:
-    1. Focus on high-value patterns: CLV, churn risk, inventory levels, and historical campaign ROI.
-    2. Use 'visualizations' for raw data patterns (Top 10-15 rows max).
+    1. TARGETED ANALYSIS: Focus specifically on answering the user's current question.
+    2. DATA EFFICIENCY: Use 'LIMIT 20' in your SQL queries. The UI is optimized for small, high-impact datasets.
+    3. MINIMAL TOOL USE: Do NOT perform a "full analysis" unless general insights are requested. Answer and terminate.
+    4. RELEVANT VISUALS: Only add 'visualizations' if they directly support your answer. 
+    
+    WORKFLOW:
+    - EXPLORE: Run targeted queries (max 20 rows each).
+    - SUMMARIZE: Provide a concise JSON response.
+    - TERMINATE: Output JSON and stop.
+    
+    JSON REQUIREMENTS:
+    - 'summary': A concise answer to the user's question.
+    - 'key_metrics': High-level numbers related ONLY to the current query.
+    - 'visualizations': List of charts/tables (optional for simple queries).
+    - 'raw_query_used': The primary SQL query used.
     
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to AnalysisResult schema and terminate.
-    CRITICAL: JSON ONLY.""",
+    CRITICAL: JSON ONLY. NO CONVERSATIONAL TEXT.""",
     tools=data_tools,
     output_schema=AnalysisResult,
     output_key="analysis_data",
+    after_tool_callback=after_tool_wrapper,
+    on_tool_error_callback=on_tool_error_wrapper,
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
-    description="Analyzes BigQuery data (sales, products, customers) to find trends and insights."
+    description="Analyzes BigQuery data to answer specific user questions and find insights."
 )
 
 # 2. Recommendation Agents
@@ -197,6 +239,8 @@ campaign_architect = Agent(
     tools=data_tools,
     output_schema=BriefResult,
     output_key="brief_data",
+    after_tool_callback=after_tool_wrapper,
+    on_tool_error_callback=on_tool_error_wrapper,
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
     description="Defines the campaign strategy, goals, and business opportunities."
@@ -223,6 +267,8 @@ segmentation_agent = Agent(
     tools=data_tools,
     output_schema=SegmentationResult,
     output_key="segments_data",
+    after_tool_callback=after_tool_wrapper,
+    on_tool_error_callback=on_tool_error_wrapper,
     disallow_transfer_to_peers=True,
     disallow_transfer_to_parent=True,
     description="Segments customers into marketing categories based on data and strategy."
@@ -301,6 +347,8 @@ root_agent = Agent(
     You are the only agent that speaks directly to the end-user.
     """,
     sub_agents=[analysis_agent, recommendation_pipeline, strategy_pipeline, content_pipeline],
+    after_tool_callback=after_tool_wrapper,
+    on_tool_error_callback=on_tool_error_wrapper,
     disallow_transfer_to_peers=False,
     disallow_transfer_to_parent=False,
     description="The main orchestrator for marketing campaigns."

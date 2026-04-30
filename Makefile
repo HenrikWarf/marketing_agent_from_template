@@ -59,11 +59,11 @@ eval:
 	$(UV) run adk eval $(AGENT) $(EVALSET) --config_file_path=tests/eval/eval_config.json --print_detailed_results
 
 playground:
-	$(UV) run adk web agents/
+	PYTHONPATH=. $(UV) run adk web agents/
 
 ui:
 	@echo "Starting ADK API Server and Custom UI..."
-	$(UV) run adk api_server agents/ --auto_create_session & \
+	PYTHONPATH=. $(UV) run adk api_server agents/ --auto_create_session & \
 	PYTHONPATH=. $(UV) run python frontend/app.py
 
 

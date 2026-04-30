@@ -1,30 +1,44 @@
-# Marketing Agent - ADK Orchestration Template
+# CampaignFlow: Production ADK Marketing Dashboard
 
-A comprehensive AI-driven marketing system built with the Google ADK (Agent Development Kit). This template demonstrates a sophisticated **Hub-and-Spoke** multi-agent orchestration pattern for automating data-driven marketing workflows—from BigQuery analysis to personalized content creation.
+A comprehensive AI-driven marketing orchestration system built with the Google ADK (Agent Development Kit) and React. This template demonstrates a sophisticated **Hub-and-Spoke** multi-agent orchestration pattern with **Sequential Pipelines** for automating data-driven marketing workflows—from BigQuery analysis to personalized content creation and activation.
 
 ## Features
+![CampaignFlow Architecture](./nanobanana-output/editremove_the_connection_line_d.png)
+
 - **Hub-and-Spoke Orchestration**:
-  - `marketing_manager`: The central hub that manages state, monitors the "Blackboard," and coordinates experts.
-  - `analysis_agent`: Fetches and analyzes customer data from BigQuery via native MCP integration.
-  - `segmentation_agent`: Categorizes customers into meaningful segments based on data insights.
-  - `content_agent`: Generates personalized marketing copy (Email, SMS, Ads) with a built-in refinement loop.
-  - `reviewer_agent`: Validates all generated content against brand guidelines and legal compliance.
+  - **Marketing Manager**: The central hub that manages state, monitors the "Blackboard," and coordinates expert pipelines.
+  - **Recommendation Pipeline**: Opportunity Analyst → Campaign Recommender (Finds data patterns and suggests campaigns).
+  - **Strategy Pipeline**: Campaign Architect → Segmentation Agent (Defines the brief and identifies target audiences).
+  - **Content Pipeline**: Content Creator → Brand Reviewer (Generates personalized copy and validates against brand guidelines).
+- **React-Based Dashboard**:
+  - High-fidelity UI built with Vite, React, and Tailwind/CSS.
+  - Features dedicated panels for Analysis, Strategy, Content, and Review.
+  - Uses `BlackboardContext` for centralized state management across agent streams.
 - **Production-Ready Tooling**:
-  - **Native BigQuery MCP**: Fast, authenticated connection to BigQuery with hybrid local/remote identity handling.
-  - **Structured Blackboard**: All agents communicate via Pydantic schemas stored in the session state.
-  - **Self-Healing Logic**: Built-in `BigQueryReflectRetryPlugin` automatically handles and fixes SQL errors and transient connection issues.
-- **Enterprise Developer Suite**: Integrated `adk web` playground, automated behavioral evals, and full Terraform-managed CI/CD pipelines.
+  - **Native BigQuery MCP**: Fast, authenticated connection to BigQuery.
+  - **Activation Workflow**: Approved campaigns are saved to a local SQLite database (`campaigns.db`) via a FastAPI proxy.
+  - **Contract Validation**: Built-in scripts to ensure frontend TypeScript interfaces and backend Python Pydantic models remain in sync.
 
 ## Developer Flow
 
 This template follows a robust **Local -> Remote Dev -> Remote Staging -> Remote Prod** flow.
 
 ### 1. Local Development
-Iterate on your agent and tools locally with high performance.
+The most reliable way to start all components (ADK Backend, FastAPI Proxy, and React UI) is using the unified startup script:
+
+```bash
+# Start the full application
+bash campaign-flow/scripts/start_all.sh
+```
+- Access the React UI at **http://localhost:5173**
+- The ADK Agent Backend runs on Port 8000
+- The FastAPI Proxy runs on Port 3000
+
+**Other useful commands:**
 - **Setup**: `make setup` followed by `make gcp-setup`.
-- **Playground**: `make playground` (interactive test of all agents).
-- **Custom UI**: `make ui` (starts the chat interface at http://localhost:3000).
+- **Contract Validation**: `make validate-contract`.
 - **Checks**: `make lint`, `make test`, `make eval`.
+- **Basic UI**: `make ui` (starts only the backend and a simplified chat interface at http://localhost:3000).
 
 ### 2. Deployment to Cloud (Manual)
 Test in managed cloud environments using dedicated service accounts.
@@ -37,22 +51,17 @@ The project includes full infrastructure-as-code management:
 - **Staging**: Merges to `main` trigger deployment to the **Staging** environment and automated Load Tests.
 - **Production**: Promotion requires manual approval in GitHub Actions.
 
-## Custom Chat UI
-A modern, SSE-powered chat interface is provided in `frontend/`. 
-- **Intelligent Rendering**: Handled duplicated chunks and full-state updates from ADK streams.
-- **Multi-Environment**: Seamlessly switch between Local, Dev, Staging, and Prod backends from the UI header.
-
 ## Documentation
-- **[AGENT_DESIGN.md](AGENT_DESIGN.md)**: Detailed technical breakdown of the Hub-and-Spoke architecture.
+- **[CAMPAIGN-FLOW.md](CAMPAIGN-FLOW.md)**: Detailed architectural overview of the React dashboard and agent pipelines.
+- **[AGENT_DESIGN.md](AGENT_DESIGN.md)**: Technical breakdown of the Hub-and-Spoke architecture.
 - **[BIGQUERY_MCP_AUTH.md](BIGQUERY_MCP_AUTH.md)**: Guide on identity management and user delegation.
-- **[DESIGN_SPEC.md](DESIGN_SPEC.md)**: Original project goals and architectural constraints.
+- **[DEVELOPMENT_FLOW.md](DEVELOPMENT_FLOW.md)**: Guide on using different environments.
 
 ## Project Structure
-- `agents/`:
-  - `marketing_agent/`: The primary multi-agent system (Manager + 4 sub-agents).
-  - `shared/`: Shared tools and specialized plugins (BigQuery recovery).
-  - `agent_engine_app.py`: Entrypoint for remote Agent Engine deployment.
+- `agents/`: The Python backend containing the primary multi-agent system, shared tools, and `agent_engine_app.py`.
+- `campaign-flow/`: The React frontend application (Vite + TypeScript).
 - `deployment/terraform/`: Managed infrastructure and IAM definitions.
-- `frontend/`: FastAPI backend and vanilla JS/CSS chat frontend.
-- `tests/`: Unit, integration, and behavioral evaluation sets.
-- `Makefile`: Centralized command hub for the entire developer lifecycle.
+- `frontend/`: FastAPI proxy backend that handles local SQLite activation and bridges the UI with the ADK backend.
+- `scripts/`: Utilities like `validate_contract.py` and `migrate_db_contract.py`.
+- `tests/`: Unit, integration, and behavioral evaluation sets (`.evalset.json`).
+- `Makefile`: Centralized command hub for the developer lifecycle.

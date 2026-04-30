@@ -8,33 +8,7 @@ Instead of a linear chain where agents call each other blindly ($A \to B \to C$)
 
 ### Visual Architecture (Hub-and-Spoke)
 
-```text
-          +-----------------------+
-          |         USER          |
-          +-----------+-----------+
-                      |
-                      v
-          +-----------------------+
-          |   MARKETING MANAGER   |<-------------------+
-          |        (The Hub)      |                    |
-          +-----------+-----------+                    |
-                      |                                |
-      +---------------+---------------+                | (Refinement
-      |               |               |                |    Loop)
-      v               v               v                |
-+-----------+   +-----------+   +-----------+   +------+----+
-| Analysis  |   | Segment   |   |  Content  |   | Reviewer  |
-|  Agent    |   |   Agent   |   |   Agent   |   |   Agent   |
-+-----------+   +-----------+   +-----------+   +-----------+
-      |               |               |                |
-      +---------------+---------------+----------------+
-                      |
-                      v
-          +-----------------------+
-          |  BLACKBOARD / STATE   |
-          | (analysis_data, etc.) |
-          +-----------------------+
-```
+![CampaignFlow Architecture](./nanobanana-output/editremove_the_connection_line_d.png)
 
 ### The Hub-and-Spoke Model
 -   **The Hub (Marketing Manager)**: Manages global goals, monitors the shared state, and decides which expert to call next.

@@ -27,6 +27,7 @@ lsof -ti:8000,3000,5173 | xargs kill -9 2>/dev/null
 sleep 1
 
 echo "Starting ADK Agent Backend (Port 8000)..."
+export PYTHONPATH="$ROOT_DIR"
 adk api_server agents/ --port 8000 --auto_create_session > adk_server.log 2>&1 &
 ADK_PID=$!
 

@@ -21,7 +21,7 @@ def extract_python_schema(file_path):
 def validate():
     print("--- VALIDATING DATA CONTRACT ---")
     root = os.getcwd()
-    ts_path = os.path.join(root, "campaign-flow", "src", "context", "BlackboardContext.ts")
+    ts_path = os.path.join(root, "campaign-flow", "src", "types", "blackboard.ts")
     py_path = os.path.join(root, "agents", "marketing_agent", "agent.py")
 
     if not os.path.exists(ts_path) or not os.path.exists(py_path):
