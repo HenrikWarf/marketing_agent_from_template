@@ -8,16 +8,18 @@ A production-ready marketing orchestration platform built with **Google ADK** an
 ## Engineering Standards
 
 ### ADK & Agent Orchestration
-- **Architecture**: Enforce a **Hub-and-Spoke** model with **Sequential Pipelines** (`SequentialAgent`) for complex tasks (Recommendation, Strategy, Content).
+- **Architecture**: Enforce a **Hub-and-Spoke** model with **Sequential Pipelines** (`SequentialAgent`) for complex tasks.
 - **Constraints**: Set `disallow_transfer_to_peers=True` and `disallow_transfer_to_parent=True` for all sub-agents to ensure results return to the hub correctly.
 - **Strict Output**: Sub-agents MUST output **ONLY structured JSON** matching their schemas. Conversational text must be handled exclusively by the `Marketing Manager`.
-- **Model**: Standardize on `gemini-2.0-flash` with the `GOOGLE_CLOUD_LOCATION` set to `global` in `agent.py`.
+- **Model**: Standardize on `gemini-3-flash-preview` (or `gemini-2.0-flash` if requested) with the `GOOGLE_CLOUD_LOCATION` set to `global` in `agent.py`.
+- **Data Safety**: Large tool outputs (like BigQuery) MUST be truncated to **50 rows** in the `BigQueryReflectRetryPlugin` to prevent context explosion and frontend crashes.
 
 ### React Frontend & State
 - **State Management**: Use the `BlackboardContext` for all campaign-related structured data.
-- **Monitoring**: Maintain the "Smart Monitor" in `App.tsx` to automatically switch views when new data arrives.
-- **Streaming**: The `useChatStream` hook uses a specialized Multi-JSON parser. Never revert this to a simple string accumulator.
-- **Unified Views**: Group related sections (e.g., Strategy + Audience) into a single dashboard view to minimize menu navigation.
+- **Event Handling**: Support ADK 3.x structures by parsing `actions.stateDelta` (camelCase) and identifying tool calls in `content.parts`.
+- **Streaming**: The `useChatStream` hook uses a two-stage Multi-JSON parser (Markdown blocks first, then brace matching). Never revert this to a simple string accumulator or use complex nested regex that can hang the browser.
+- **Resilience**: Components like `AnalysisPanel` must handle partial or flat data structures gracefully.
+- **Monitoring**: Maintain the "Smart Monitor" in `App.tsx` and the `onDataReceived` callback to automatically switch views when new data arrives.
 
 ### Data & Activation
 - **Table Access**: Always use fully-qualified BigQuery paths (e.g., `` `project.dataset.table` ``) in agent instructions to prevent path hallucinations.

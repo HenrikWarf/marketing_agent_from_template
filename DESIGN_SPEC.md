@@ -38,6 +38,10 @@ The template includes examples of various agent architectures (Simple, Subagent,
 - **Eval-Fix Loop**: Iteratively refine prompts based on eval scores.
 
 ## Edge Cases to Handle
+- **Large Query Payloads**: Managed via a 50-row truncation limit in the `BigQueryReflectRetryPlugin` and length-based parsing limits (100KB) in the UI.
+- **SSE Chunk Splitting**: Addressed via line-buffering in the `useChatStream` hook to prevent `SyntaxError` during JSON parsing of large messages.
+- **ADK 3.x Lifecycle**: Support for `actions.stateDelta` and `content.parts` to ensure state updates and breadcrumbs aren't lost in transit.
+- **Model Termination Loops**: Prevented via explicit workflow instructions in the agent prompt and strict Pydantic schema enforcement.
 - Tool execution failures (graceful degradation).
 - Large context handling (truncation or compaction strategies).
 - Connectivity issues with external APIs (Google Search, MCP).

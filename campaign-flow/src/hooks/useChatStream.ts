@@ -17,13 +17,23 @@ export interface AgentStep {
 export interface ChatEvent {
   author?: string;
   agent_name?: string;
-  tool_call?: any;
-  tool_response?: any;
-  actions?: any[];
   content?: {
-    parts?: { text: string }[];
+    parts?: { 
+      text?: string;
+      functionCall?: any;
+      functionResponse?: any;
+    }[];
   };
-  session_state?: any;
+  actions?: {
+    stateDelta?: any;
+    state_delta?: any;
+    transferToAgent?: string;
+    transfer_to_agent?: string;
+    endOfAgent?: boolean;
+    end_of_agent?: boolean;
+  };
+  session_state?: any; // Legacy support
+  state?: any; // Legacy support
   session_id?: string;
   error?: string;
 }
@@ -78,40 +88,76 @@ export const useChatStream = () => {
       if (!reader) return;
 
       const processJsonInText = (text: string) => {
-        const jsonMatches = text.match(/\{[\s\S]*?\}(?=\s*\{|\s*$)/g) || [];
         let cleanDisplay = text;
         let matchedSomething = false;
 
-        for (const match of jsonMatches) {
+        // 1. Try to find JSON in markdown blocks first (safest)
+        const mdRegex = /```(?:json)?\s*([\s\S]*?)\s*```/g;
+        let mdMatch;
+        while ((mdMatch = mdRegex.exec(text)) !== null) {
           try {
-            const parsed = JSON.parse(match);
-            const dataKeys = ['recommendations', 'campaign_name', 'summary', 'segments', 'content_drafts', 'status', 'drafts', 'posts'];
-            
-            if (Object.keys(parsed).some(k => dataKeys.includes(k))) {
+            const rawJson = mdMatch[1];
+            if (rawJson.length > 100000) continue; 
+            const parsed = JSON.parse(rawJson);
+            if (updateStateFromParsed(parsed)) {
               matchedSomething = true;
-              console.log("HOOK: Detected JSON in stream", parsed);
-              
-              if (parsed.recommendations) { updateState({ recommendations_data: parsed }); onDataReceived?.('recommendations'); }
-              else if (parsed.campaign_name) { updateState({ brief_data: parsed }); onDataReceived?.('brief'); }
-              else if (parsed.summary) { updateState({ analysis_data: parsed }); onDataReceived?.('analysis'); }
-              else if (parsed.segments) { updateState({ segments_data: parsed }); onDataReceived?.('segmentation'); }
-              else if (parsed.content_drafts || parsed.drafts || parsed.posts) { updateState({ content_data: parsed }); onDataReceived?.('content'); }
-              else if (parsed.status) { updateState({ review_data: parsed }); onDataReceived?.('content'); }
-              
-              cleanDisplay = cleanDisplay.replace(match, '').trim();
+              cleanDisplay = cleanDisplay.replace(mdMatch[0], '').trim();
             }
-          } catch (e) {
-            console.warn("HOOK: JSON parse failed", e);
+          } catch (e) {}
+        }
+
+        // 2. Fallback: Search for potential JSON blocks starting from the end (most likely to be the final answer)
+        if (!matchedSomething) {
+          const indicators = ['"recommendations"', '"campaign_name"', '"summary"', '"segments"', '"content_drafts"', '"status"'];
+          
+          // Find all possible { } pairs
+          const firstBrace = text.indexOf('{');
+          const lastBrace = text.lastIndexOf('}');
+          
+          if (firstBrace !== -1 && lastBrace > firstBrace) {
+            // Heuristic: try to parse from first brace to last brace
+            const block = text.substring(firstBrace, lastBrace + 1);
+            if (block.length < 200000 && indicators.some(ind => block.includes(ind))) {
+                try {
+                    const parsed = JSON.parse(block);
+                    if (updateStateFromParsed(parsed)) {
+                        matchedSomething = true;
+                        cleanDisplay = cleanDisplay.substring(0, firstBrace) + cleanDisplay.substring(lastBrace + 1);
+                    }
+                } catch (e) {
+                    // If parsing the whole block fails, the model might have prepended text
+                    // We could try to find the actual start of JSON
+                }
+            }
           }
         }
 
-        if (matchedSomething && (!cleanDisplay || cleanDisplay === ".")) {
-          return { isMatch: true, content: "_Structured data updated. See dashboard for details._" };
+        if (matchedSomething && (!cleanDisplay || cleanDisplay === "." || cleanDisplay.length < 5)) {
+          return { isMatch: true, content: "_Structured data updated. View dashboard._" };
         }
         return { isMatch: matchedSomething, content: cleanDisplay };
       };
 
+      const updateStateFromParsed = (parsed: any): boolean => {
+        const data = parsed.agent_response || parsed;
+        let foundKey = false;
+        
+        if (data.recommendations) { updateState({ recommendations_data: data }); onDataReceived?.('recommendations'); foundKey = true; }
+        if (data.campaign_name) { updateState({ brief_data: data }); onDataReceived?.('brief'); foundKey = true; }
+        if (data.summary || data.visualizations || data.key_metrics) { updateState({ analysis_data: data }); onDataReceived?.('analysis'); foundKey = true; }
+        if (data.segments) { updateState({ segments_data: data }); onDataReceived?.('segmentation'); foundKey = true; }
+        if (data.content_drafts || data.drafts) { updateState({ content_data: data }); onDataReceived?.('content'); foundKey = true; }
+        if (data.status === 'VERIFIED' || data.status === 'REJECTED') { updateState({ review_data: data }); onDataReceived?.('content'); foundKey = true; }
+        
+        if (foundKey) {
+            console.log("HOOK: State updated from parsed JSON", data);
+        }
+        return foundKey;
+      };
+
       let reading = true;
+      let lineBuffer = '';
+
       while (reading) {
         const { value, done } = await reader.read();
         if (done) {
@@ -120,15 +166,34 @@ export const useChatStream = () => {
         }
 
         const chunk = decoder.decode(value, { stream: true });
-        const lines = chunk.split('\n');
+        lineBuffer += chunk;
+        const lines = lineBuffer.split('\n');
+        
+        // Keep the last partial line in the buffer
+        lineBuffer = lines.pop() || '';
 
         for (const line of lines) {
           if (line.startsWith('data: ')) {
             try {
               const rawData = line.slice(6);
               if (rawData === '[DONE]') continue;
+              if (!rawData.trim()) continue;
 
               const data: ChatEvent = JSON.parse(rawData);
+
+              if (data.error) {
+                setMessages(prev => {
+                  const next = [...prev];
+                  const lastIdx = next.length - 1;
+                  next[lastIdx] = { 
+                    ...next[lastIdx], 
+                    parts: [{ text: `Error: ${data.error}` }],
+                    agentId: 'System'
+                  };
+                  return next;
+                });
+                return;
+              }
 
               const agentName = data.author || data.agent_name;
               if (agentName && agentName !== lastKnownAgent) {
@@ -140,24 +205,45 @@ export const useChatStream = () => {
                 });
               }
 
-              if (data.actions && Array.isArray(data.actions)) {
-                const lastAction = data.actions[data.actions.length - 1];
-                if (lastAction.tool_call) setActiveTool(`Executing ${lastAction.tool_call.name}...`);
-                if (lastAction.tool_response) setActiveTool(`Finished ${lastAction.tool_response.name}`);
+              // Handle ADK Event structure (actions object)
+              const actions = data.actions;
+              if (actions) {
+                const stateDelta = actions.stateDelta || actions.state_delta;
+                if (stateDelta) {
+                  updateState(stateDelta);
+                  if (stateDelta.recommendations_data) onDataReceived?.('recommendations');
+                  if (stateDelta.brief_data) onDataReceived?.('brief');
+                  if (stateDelta.analysis_data) onDataReceived?.('analysis');
+                  if (stateDelta.segments_data) onDataReceived?.('segmentation');
+                  if (stateDelta.content_data) onDataReceived?.('content');
+                  if (stateDelta.review_data) onDataReceived?.('content');
+                }
               }
 
-              if (data.session_state) {
-                updateState(data.session_state);
-                if (data.session_state.recommendations_data) onDataReceived?.('recommendations');
-                if (data.session_state.brief_data) onDataReceived?.('brief');
-                if (data.session_state.analysis_data) onDataReceived?.('analysis');
-                if (data.session_state.segments_data) onDataReceived?.('segmentation');
-                if (data.session_state.content_data) onDataReceived?.('content');
-                if (data.session_state.review_data) onDataReceived?.('content');
+              // Handle direct session_state or state fields (Legacy/Custom)
+              const sessionState = data.session_state || data.state;
+              if (sessionState) {
+                updateState(sessionState);
+                if (sessionState.recommendations_data) onDataReceived?.('recommendations');
+                if (sessionState.brief_data) onDataReceived?.('brief');
+                if (sessionState.analysis_data) onDataReceived?.('analysis');
+                if (sessionState.segments_data) onDataReceived?.('segmentation');
+                if (sessionState.content_data) onDataReceived?.('content');
+                if (sessionState.review_data) onDataReceived?.('content');
               }
 
               if (data.content && data.content.parts) {
-                const chunkText = data.content.parts.map(p => p.text || '').join('');
+                let chunkText = '';
+                for (const part of data.content.parts) {
+                  if (part.text) {
+                    chunkText += part.text;
+                  } else if (part.functionCall) {
+                    setActiveTool(`Executing ${part.functionCall.name}...`);
+                  } else if (part.functionResponse) {
+                    setActiveTool(`Finished ${part.functionResponse.name}`);
+                  }
+                }
+
                 if (chunkText) {
                   if (chunkText.startsWith(fullText)) {
                     fullText = chunkText;
@@ -168,8 +254,9 @@ export const useChatStream = () => {
                   const { isMatch, content } = processJsonInText(fullText);
                   let finalDisplay = content;
 
-                  if (!isMatch && fullText.trim().startsWith('{') && fullText.trim().length > 5) {
-                    finalDisplay = "...";
+                  // Mask JSON blocks during streaming
+                  if (!isMatch && fullText.trim().startsWith('{') && fullText.trim().length > 10) {
+                    finalDisplay = "Generating structured data...";
                   }
 
                   setMessages(prev => {
@@ -191,7 +278,7 @@ export const useChatStream = () => {
       if (isMatch) {
         setMessages(prev => {
           const next = [...prev];
-          next[next.length - 1].parts = [{ text: "_Structured data updated._" }];
+          next[next.length - 1].parts = [{ text: "_Structured data updated. View results in the dashboard._" }];
           return next;
         });
       }

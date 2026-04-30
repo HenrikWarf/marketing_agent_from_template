@@ -33,9 +33,8 @@ import {
 
 type ViewType = 'analysis' | 'recommendations' | 'brief' | 'content' | 'grid';
 
-const Dashboard: React.FC = () => {
+const Dashboard: React.FC<{ activeView: ViewType, setActiveView: (v: ViewType) => void }> = ({ activeView, setActiveView }) => {
   const { state } = useBlackboard();
-  const [activeView, setActiveView] = useState<ViewType>('analysis');
   const [isGridView, setIsGridView] = useState(false);
   
   const seenDataRef = useRef<Record<string, string | null>>({
@@ -71,7 +70,7 @@ const Dashboard: React.FC = () => {
         setActiveView('content');
         setIsGridView(false);
     }
-  }, [state]);
+  }, [state, setActiveView]);
 
   const VIEWS = [
     { id: 'analysis', title: 'Data Analysis', icon: BarChart3, color: 'var(--analysis-color)', data: state.analysis_data, panel: AnalysisPanel, msg: "Connect to BigQuery to begin your marketing analysis." },
@@ -201,7 +200,9 @@ const Dashboard: React.FC = () => {
 
 const App: React.FC = () => {
   const { state } = useBlackboard();
+  const [activeView, setActiveView] = useState<ViewType>('analysis');
   const [showPortal, setShowPortal] = useState(false);
+  // ... rest of App component ...
   const [environments, setEnvironments] = useState<any[]>([]);
   const [currentEnv, setCurrentEnv] = useState('local');
   const [agents, setAgents] = useState<any[]>([]);
@@ -298,6 +299,10 @@ const App: React.FC = () => {
               onNewSession={handleNewSession}
               onDataReceived={(type) => {
                 console.log("UI: Auto-switching view to", type);
+                if (type === 'analysis') setActiveView('analysis');
+                if (type === 'recommendations') setActiveView('recommendations');
+                if (type === 'brief' || type === 'segmentation') setActiveView('brief');
+                if (type === 'content') setActiveView('content');
               }}
             />
           </aside>
@@ -366,7 +371,7 @@ const App: React.FC = () => {
               </div>
             </header>
 
-            <Dashboard />
+            <Dashboard activeView={activeView} setActiveView={setActiveView} />
           </main>
 
           {/* Activation Modal */}

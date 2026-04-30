@@ -197,61 +197,80 @@ const MetricView: React.FC<MetricViewProps> = ({ label, value, initialMode = 'ta
 };
 
 const AnalysisPanel: React.FC<{ data: AnalysisData }> = ({ data }) => {
+  console.log("AnalysisPanel: Rendering with data:", data);
+
   const visualizations = useMemo(() => {
-    if (!data.visualizations) return [];
+    if (!data || !data.visualizations) return [];
     
-    // If it's a flat array of data objects (not wrapped in title/type/data)
-    if (Array.isArray(data.visualizations) && data.visualizations.length > 0 && !data.visualizations[0].data) {
+    const vizArray = Array.isArray(data.visualizations) ? data.visualizations : [];
+    
+    // Heuristic: if it's a flat array of data objects (not wrapped in title/type/data)
+    if (vizArray.length > 0 && typeof vizArray[0] === 'object' && !vizArray[0].data) {
       return [{
         title: "Key Data Patterns",
         type: "bar",
-        data: data.visualizations
+        data: vizArray
       }];
     }
     
-    return data.visualizations;
-  }, [data.visualizations]);
+    // Ensure each item has at least a data array
+    return vizArray.map((v: any) => ({
+      title: v.title || "Data Pattern",
+      type: v.type || "bar",
+      data: Array.isArray(v.data) ? v.data : []
+    })).filter(v => v.data.length > 0);
+  }, [data]);
+
+  if (!data) return <div className="empty-metrics-state">No data available for Analysis</div>;
 
   return (
     <div className="analysis-container">
-      <div className="analysis-summary-box">
-        <h4 className="section-title">Summary</h4>
-        <p className="summary-text">{data.summary}</p>
-      </div>
+      {data.summary && (
+        <div className="analysis-summary-box">
+          <h4 className="section-title">Summary</h4>
+          <p className="summary-text">{data.summary}</p>
+        </div>
+      )}
 
-      {visualizations.length > 0 && (
-        <div className="analysis-visualizations-box">
-          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
-            <Presentation size={18} color="var(--google-blue)" />
-            <h4 className="section-title" style={{ marginBottom: 0 }}>Key Visualizations</h4>
-          </div>
+      <div className="analysis-visualizations-box">
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '12px' }}>
+          <Presentation size={18} color="var(--google-blue)" />
+          <h4 className="section-title" style={{ marginBottom: 0 }}>Key Visualizations</h4>
+        </div>
+        {visualizations.length > 0 ? (
           <div className="metrics-list">
             {visualizations.map((viz: any, i: number) => (
               <MetricView 
                 key={i} 
-                label={viz.title || "Data Pattern"} 
+                label={viz.title} 
                 value={viz.data} 
-                initialMode={viz.type || 'bar'} 
+                initialMode={viz.type} 
               />
             ))}
           </div>
-        </div>
-      )}
+        ) : (
+          <div className="empty-visualizations-state">
+            <p className="empty-subtext">No visual patterns identified. The agent is exploring data patterns in BigQuery.</p>
+          </div>
+        )}
+      </div>
       
       <div className="analysis-metrics-box">
         <h4 className="section-title">Key Metrics & Insights</h4>
         <div className="metrics-list">
-          {data.key_metrics && Object.keys(data.key_metrics).length > 0 ? (
+          {data.key_metrics && typeof data.key_metrics === 'object' && Object.keys(data.key_metrics).length > 0 ? (
             Object.entries(data.key_metrics).map(([key, value]) => (
               <MetricView key={key} label={key} value={value} />
             ))
           ) : (
-            <span className="empty-metrics">No specific metrics extracted yet.</span>
+            <div className="empty-metrics-state">
+              <span className="empty-metrics">Waiting for metrics...</span>
+            </div>
           )}
         </div>
       </div>
 
-      {data.trends && data.trends.length > 0 && (
+      {data.trends && Array.isArray(data.trends) && data.trends.length > 0 && (
         <div className="analysis-trends-box">
           <h4 className="section-title">Identified Trends</h4>
           <ul className="trends-list">
