@@ -103,7 +103,9 @@ export const useChatStream = () => {
               matchedSomething = true;
               cleanDisplay = cleanDisplay.replace(mdMatch[0], '').trim();
             }
-          } catch (e) {}
+          } catch (e) {
+            console.debug("HOOK: Markdown JSON parse failed", e);
+          }
         }
 
         // 2. Fallback: Search for potential JSON blocks starting from the end (most likely to be the final answer)
@@ -125,8 +127,7 @@ export const useChatStream = () => {
                         cleanDisplay = cleanDisplay.substring(0, firstBrace) + cleanDisplay.substring(lastBrace + 1);
                     }
                 } catch (e) {
-                    // If parsing the whole block fails, the model might have prepended text
-                    // We could try to find the actual start of JSON
+                    console.debug("HOOK: Fallback JSON parse failed", e);
                 }
             }
           }

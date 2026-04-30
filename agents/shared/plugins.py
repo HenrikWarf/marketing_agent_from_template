@@ -96,8 +96,10 @@ class BigQueryReflectRetryPlugin(ReflectAndRetryToolPlugin):
                     else:
                         try:
                             # Handle numeric strings
-                            if "." in str(v): processed_values.append(float(v))
-                            else: processed_values.append(int(v))
+                            if "." in str(v):
+                                processed_values.append(float(v))
+                            else:
+                                processed_values.append(int(v))
                         except (ValueError, TypeError):
                             processed_values.append(v)
                 rows.append(dict(zip(fields, processed_values)))
