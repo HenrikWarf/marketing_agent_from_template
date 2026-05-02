@@ -62,6 +62,7 @@ CampaignFlow implements a full production lifecycle via the **Activate** feature
 ## 📊 UI/UX Standards
 
 *   **Material Design 3**: Uses pill shapes, specific elevation levels, and a clean "Google-style" aesthetic.
+*   **Data-to-Visual Mapping**: The `AnalysisPanel` is optimized for structured JSON. To prevent rendering empty objects, the `analysis_agent` uses strict Pydantic validation and instructions that mandate row-level data extraction.
 *   **Unified Views**: Tasks that belong together are displayed together (e.g., Strategy + Audience, Content + Review).
 *   **Ghost States**: Empty dashboard sections use "Ghost Cards" with centered icons and progress tracks to maintain layout balance before data is generated.
 *   **Multi-JSON Parsing**: The `useChatStream` hook uses a robust regex parser to identify and extract multiple JSON blocks from a single concatenated agent stream.

@@ -236,13 +236,23 @@ class RemoteBackend(BaseBackend):
             async for chunk in combined_stream():
                 # ADK Event objects or dicts
                 if hasattr(chunk, "model_dump"):
-                    yield f"data: {json.dumps(chunk.model_dump(), cls=DefaultEncoder)}\n\n"
+                    data = chunk.model_dump()
+                    # Normalize stateDelta to state_delta for consistency
+                    if "actions" in data and "stateDelta" in data["actions"]:
+                        data["actions"]["state_delta"] = data["actions"].pop("stateDelta")
+                    yield f"data: {json.dumps(data, cls=DefaultEncoder)}\n\n"
                 elif hasattr(chunk, "to_dict"):
-                    yield f"data: {json.dumps(chunk.to_dict(), cls=DefaultEncoder)}\n\n"
+                    data = chunk.to_dict()
+                    if "actions" in data and "stateDelta" in data["actions"]:
+                        data["actions"]["state_delta"] = data["actions"].pop("stateDelta")
+                    yield f"data: {json.dumps(data, cls=DefaultEncoder)}\n\n"
                 elif isinstance(chunk, dict):
                     # Ensure we pass through metadata for breadcrumbs if it's there
                     metadata_keys = ["agent_name", "agentName", "tool_call", "toolCall", "tool_calls", "toolCalls", "tool_response", "toolResponse", "tool_call_result", "toolCallResult"]
                     if any(k in chunk for k in metadata_keys):
+                        # Normalize stateDelta if present in raw dict
+                        if "actions" in chunk and "stateDelta" in chunk["actions"]:
+                             chunk["actions"]["state_delta"] = chunk["actions"].pop("stateDelta")
                         yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
                     elif "content" in chunk:
                         yield f"data: {json.dumps(chunk, cls=DefaultEncoder)}\n\n"
