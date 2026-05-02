@@ -63,20 +63,20 @@ class BriefResult(BaseModel):
 
 class VisualizationItem(BaseModel):
     """A single chart or table data block."""
-    title: str = Field(description="Title of the chart or table")
-    type: str = Field(description="Must be 'bar', 'line', or 'table'")
-    data: List[Dict[str, Any]] = Field(description="The actual data rows from the tool result")
+    title: str = Field(description="Clear title of the chart or table (e.g., 'Revenue by Category')")
+    type: str = Field(description="Visual format: MUST be exactly 'bar', 'line', or 'table'")
+    data: List[Dict[str, Any]] = Field(description="The ACTUAL data rows from the tool result. DO NOT leave these as empty objects. Each object must contain the column names as keys and the row values.")
 
 class AnalysisResult(BaseModel):
     """Result of the data analysis phase."""
-    summary: str = Field(description="Executive summary of findings")
-    key_metrics: Dict[str, Any] = Field(description="Important single-value metrics")
+    summary: str = Field(description="A 2-3 sentence executive summary of the findings.")
+    key_metrics: Dict[str, Any] = Field(description="A dictionary of key single-value metrics (e.g., {'Total Revenue': 5000, 'Customer Count': 120}). Keys should be user-friendly labels.")
     visualizations: List[VisualizationItem] = Field(
         default_factory=list,
-        description="Data specifically for charts and tables."
+        description="Data specifically for charts and tables. Extract this directly from your tool results."
     )
-    trends: Optional[List[str]] = Field(default_factory=list, description="Identified trends in the data")
-    raw_query_used: Optional[str] = Field(default="", description="The SQL query produced")
+    trends: Optional[List[str]] = Field(default_factory=list, description="List of 2-3 identified trends or patterns in the data.")
+    raw_query_used: Optional[str] = Field(default="", description="The EXACT primary SQL query you executed to get this data.")
 
 class SegmentationResult(BaseModel):
     """Result of the customer segmentation phase."""
@@ -132,7 +132,7 @@ async def on_tool_error_wrapper(tool, args, tool_context, error):
 analysis_agent = Agent(
     name="analysis_agent",
     model=MODEL_NAME,
-    instruction=f"""You are a data analyst at Crazy Furnishing Company. Your goal is to answer marketing and data questions using BigQuery.
+    instruction=f"""You are a senior data analyst at Crazy Furnishing Company. Your goal is to answer marketing and data questions by querying BigQuery and providing structured insights.
     
     IMPORTANT - DATA ACCESS:
     - Customers: `{PROJECT_ID}.{DATASET_ID}.customer`
@@ -142,25 +142,20 @@ analysis_agent = Agent(
     
     GUIDELINES:
     1. TARGETED ANALYSIS: Focus specifically on answering the user's current question.
-    2. DATA EFFICIENCY: Use 'LIMIT 20' in your SQL queries. The UI is optimized for small, high-impact datasets.
-    3. MINIMAL TOOL USE: Do NOT perform a "full analysis" unless general insights are requested. Answer and terminate.
-    4. RELEVANT VISUALS: Only add 'visualizations' if they directly support your answer. 
+    2. DATA EFFICIENCY: Use 'LIMIT 20' in your SQL queries.
+    3. MINIMAL TOOL USE: Run only the queries necessary to answer the question.
+    4. DATA EXTRACTION: When you receive tool results, you MUST extract the actual row data and map it into the 'visualizations' and 'key_metrics' fields. Never return empty data objects [{{}}] if the tool returned rows.
     
     WORKFLOW:
-    - EXPLORE: Run targeted queries (max 20 rows each).
-    - SUMMARIZE: Provide a concise JSON response.
+    - EXPLORE: Run targeted SQL queries using `execute_sql_readonly`.
+    - ANALYZE: Review the tool results.
+    - MAP: Populate the AnalysisResult schema. Ensure 'key_metrics' contains at least one relevant metric and 'visualizations' contains the raw data from your queries.
     - TERMINATE: Output JSON and stop.
-    
-    JSON REQUIREMENTS:
-    - 'summary': A concise answer to the user's question.
-    - 'key_metrics': High-level numbers related ONLY to the current query.
-    - 'visualizations': List of charts/tables (optional for simple queries).
-    - 'raw_query_used': The primary SQL query used.
     
     Schema: {MARKETING_SCHEMA}
     
     EXIT CONDITION: Format strictly according to AnalysisResult schema and terminate.
-    CRITICAL: JSON ONLY. NO CONVERSATIONAL TEXT.""",
+    CRITICAL: JSON ONLY. NO CONVERSATIONAL TEXT. ALL DATA FIELDS MUST BE POPULATED WITH REAL VALUES FROM TOOLS.""",
     tools=data_tools,
     output_schema=AnalysisResult,
     output_key="analysis_data",
