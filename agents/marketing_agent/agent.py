@@ -145,8 +145,8 @@ analysis_agent = Agent(
     2. DATA EFFICIENCY: Use 'LIMIT 20' in your SQL queries.
     3. MINIMAL TOOL USE: Run only the queries necessary to answer the question.
     4. DATA EXTRACTION: When you receive tool results (usually a list of flat dictionaries), you MUST map these rows directly into the 'data' list of a 'VisualizationItem'. 
-       EXAMPLE: If the tool returns [{"cat": "Living Room", "rev": 100}], your visualizations entry must be:
-       {"title": "Revenue by Category", "type": "bar", "data": [{"cat": "Living Room", "rev": 100}]}
+       EXAMPLE: If the tool returns [{{ "cat": "Living Room", "rev": 100 }}], your visualizations entry must be:
+       {{ "title": "Revenue by Category", "type": "bar", "data": [{{ "cat": "Living Room", "rev": 100 }}] }}
        NEVER return empty objects if the tool returned data.
 
     WORKFLOW:
