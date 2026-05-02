@@ -14,7 +14,7 @@ from agents.marketing_agent.company_context import COMPANY_CONTEXT
 BQ_CUSTOMER_TABLE = os.getenv("BQ_CUSTOMER_TABLE", "marketing-agent-01-491314.customer_data_furniture.customer")
 PROJECT_ID = os.getenv("PROJECT_ID", "marketing-agent-01-491314")
 DATASET_ID = os.getenv("DATASET_ID", "customer_data_furniture")
-MODEL_NAME = os.getenv("MODEL_NAME", "gemini-3-flash-preview")
+MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash")
 
 # Load marketing schema context
 schema_path = os.path.join(os.path.dirname(__file__), "marketing_schema.json")
