@@ -1,0 +1,29 @@
+#!/bin/bash
+
+# Get current branch name
+BRANCH=$(git rev-parse --abbrev-ref HEAD)
+
+# Only run on dev or main branches
+if [[ "$BRANCH" == "dev" || "$BRANCH" == "main" ]]; then
+    echo "--- Pre-commit check on $BRANCH branch ---"
+    
+    # Run Linters
+    echo "Running linters..."
+    make lint
+    if [ $? -ne 0 ]; then
+        echo "❌ Linting failed. Commit aborted."
+        exit 1
+    fi
+
+    # Run Data Contract Validation
+    echo "Running data contract validation..."
+    make validate-contract
+    if [ $? -ne 0 ]; then
+        echo "❌ Data contract validation failed. Commit aborted."
+        exit 1
+    fi
+
+    echo "✅ Pre-commit checks passed for $BRANCH."
+fi
+
+exit 0

@@ -11,6 +11,7 @@ A production-ready marketing orchestration platform built with **Google ADK** an
 - **Architecture**: Enforce a **Hub-and-Spoke** model with **Sequential Pipelines** (`SequentialAgent`) for complex tasks.
 - **Constraints**: Set `disallow_transfer_to_peers=True` and `disallow_transfer_to_parent=True` for all sub-agents to ensure results return to the hub correctly.
 - **Strict Output**: Sub-agents MUST output **ONLY structured JSON** matching their schemas. Conversational text must be handled exclusively by the `Marketing Manager`.
+- **Analysis Data**: The `analysis_agent` MUST explicitly extract and map row data into the `visualizations` field. Never allow it to return empty data objects `[{}]` if tool rows are present.
 - **Model**: Standardize on `gemini-3-flash-preview` (or `gemini-2.0-flash` if requested) with the `GOOGLE_CLOUD_LOCATION` set to `global` in `agent.py`.
 - **Data Safety**: Large tool outputs (like BigQuery) MUST be truncated to **50 rows** in the `BigQueryReflectRetryPlugin` to prevent context explosion and frontend crashes.
 
