@@ -83,6 +83,8 @@ deploy:
 	$(eval BASE_NAME=$(shell grep AGENT_DISPLAY_NAME .env | cut -d '=' -f2))
 	$(eval FINAL_NAME=$(if $(ENV),$(BASE_NAME)-$(ENV),$(BASE_NAME)))
 	$(eval SERVICE_ACCOUNT=$(if $(SA),$(SA),$(shell grep APP_SERVICE_ACCOUNT .env | cut -d '=' -f2)))
+	$(eval DATASET_ID=$(shell grep DATASET_ID .env | cut -d '=' -f2))
+	$(eval MODEL_NAME=$(shell grep MODEL_NAME .env | cut -d '=' -f2))
 	($(UV) export --no-hashes --no-header --no-dev --no-emit-project --no-annotate > agents/app_utils/.requirements.txt 2>/dev/null || \
 	$(UV) export --no-hashes --no-header --no-dev --no-emit-project > agents/app_utils/.requirements.txt) && \
 	$(UV) run -m agents.app_utils.deploy \
@@ -93,4 +95,5 @@ deploy:
 		--entrypoint-object=agent_engine \
 		--requirements-file=agents.app_utils.requirements.txt \
 		--service-account=$(SERVICE_ACCOUNT) \
+		--set-env-vars="MODEL_NAME=$(MODEL_NAME),PROJECT_ID=$(GOOGLE_CLOUD_PROJECT),DATASET_ID=$(DATASET_ID)" \
 		$(if $(AGENT_IDENTITY),--agent-identity)
