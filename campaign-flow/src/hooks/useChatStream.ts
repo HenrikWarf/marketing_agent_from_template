@@ -46,6 +46,22 @@ export const useChatStream = () => {
   const [agentHistory, setAgentHistory] = useState<AgentStep[]>([]);
   const { updateState } = useBlackboard();
 
+  const normalizeToSnakeCase = useCallback((obj: any): any => {
+    if (Array.isArray(obj)) {
+      return obj.map(normalizeToSnakeCase);
+    }
+    if (obj !== null && typeof obj === 'object') {
+      const newObj: any = {};
+      for (const key in obj) {
+        // Convert camelCase to snake_case
+        const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+        newObj[snakeKey] = normalizeToSnakeCase(obj[key]);
+      }
+      return newObj;
+    }
+    return obj;
+  }, []);
+
   const sendMessage = useCallback(async (
     text: string, 
     env: string, 
@@ -209,7 +225,7 @@ export const useChatStream = () => {
               // Handle ADK Event structure (actions object)
               const actions = data.actions;
               if (actions) {
-                const stateDelta = actions.stateDelta || actions.state_delta;
+                const stateDelta = normalizeToSnakeCase(actions.stateDelta || actions.state_delta);
                 if (stateDelta) {
                   updateState(stateDelta);
                   if (stateDelta.recommendations_data) onDataReceived?.('recommendations');
@@ -222,7 +238,7 @@ export const useChatStream = () => {
               }
 
               // Handle direct session_state or state fields (Legacy/Custom)
-              const sessionState = data.session_state || data.state;
+              const sessionState = normalizeToSnakeCase(data.session_state || data.state);
               if (sessionState) {
                 updateState(sessionState);
                 if (sessionState.recommendations_data) onDataReceived?.('recommendations');
@@ -291,7 +307,7 @@ export const useChatStream = () => {
       setActiveTool(null);
       setAgentHistory(prev => prev.map(s => ({ ...s, active: false })));
     }
-  }, [updateState]);
+  }, [updateState, normalizeToSnakeCase]);
 
   const clearMessages = () => {
     setMessages([]);

@@ -144,18 +144,22 @@ analysis_agent = Agent(
     1. TARGETED ANALYSIS: Focus specifically on answering the user's current question.
     2. DATA EFFICIENCY: Use 'LIMIT 20' in your SQL queries.
     3. MINIMAL TOOL USE: Run only the queries necessary to answer the question.
-    4. DATA EXTRACTION: When you receive tool results, you MUST extract the actual row data and map it into the 'visualizations' and 'key_metrics' fields. Never return empty data objects [{{}}] if the tool returned rows.
-    
+    4. DATA EXTRACTION: When you receive tool results (usually a list of flat dictionaries), you MUST map these rows directly into the 'data' list of a 'VisualizationItem'. 
+       EXAMPLE: If the tool returns [{"cat": "Living Room", "rev": 100}], your visualizations entry must be:
+       {"title": "Revenue by Category", "type": "bar", "data": [{"cat": "Living Room", "rev": 100}]}
+       NEVER return empty objects if the tool returned data.
+
     WORKFLOW:
     - EXPLORE: Run targeted SQL queries using `execute_sql_readonly`.
     - ANALYZE: Review the tool results.
-    - MAP: Populate the AnalysisResult schema. Ensure 'key_metrics' contains at least one relevant metric and 'visualizations' contains the raw data from your queries.
+    - MAP: Populate the AnalysisResult schema. Ensure 'key_metrics' contains at least one relevant metric and 'visualizations' contains the raw row data from your queries.
     - TERMINATE: Output JSON and stop.
-    
+
     Schema: {MARKETING_SCHEMA}
-    
+
     EXIT CONDITION: Format strictly according to AnalysisResult schema and terminate.
-    CRITICAL: JSON ONLY. NO CONVERSATIONAL TEXT. ALL DATA FIELDS MUST BE POPULATED WITH REAL VALUES FROM TOOLS.""",
+    CRITICAL: JSON ONLY. NO CONVERSATIONAL TEXT. ALL DATA FIELDS MUST BE POPULATED WITH REAL VALUES FROM TOOLS. DO NOT OUTPUT EMPTY DATA OBJECTS.
+    """,
     tools=data_tools,
     output_schema=AnalysisResult,
     output_key="analysis_data",
