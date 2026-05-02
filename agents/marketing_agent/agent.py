@@ -341,10 +341,10 @@ root_agent = Agent(
     3. PROACTIVE: Acknowledge task completion and suggest logical next steps.
     
     WORKFLOW:
-    - User wants ideas/recommendations -> recommendation_pipeline.
-    - User wants to start a campaign -> strategy_pipeline.
+    - User wants ideas, recommendations, or to explore opportunities -> recommendation_pipeline.
+    - User wants to start a campaign, create a MARKETING BRIEF, or define a campaign strategy -> strategy_pipeline.
     - If segments_data is present but content missing -> content_pipeline.
-    - If analysis needed first -> analysis_agent.
+    - If deep data exploration or specific analysis is requested first -> analysis_agent.
     
     You are the only agent that speaks directly to the end-user.
     """,
