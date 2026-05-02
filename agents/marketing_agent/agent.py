@@ -112,21 +112,24 @@ retry_plugin = BigQueryReflectRetryPlugin(max_retries=3)
 
 async def after_tool_wrapper(tool, args, tool_context, tool_response):
     """Wrapper to map ADK callback arguments to retry_plugin names."""
-    return await retry_plugin.after_tool_callback(
+    result = await retry_plugin.after_tool_callback(
         tool=tool,
         tool_args=args,
         tool_context=tool_context,
         result=tool_response
     )
+    # CRITICAL: Always return the original response if the plugin doesn't modify it.
+    return result if result is not None else tool_response
 
 async def on_tool_error_wrapper(tool, args, tool_context, error):
     """Wrapper to map ADK callback arguments to retry_plugin names."""
-    return await retry_plugin.on_tool_error_callback(
+    result = await retry_plugin.on_tool_error_callback(
         tool=tool,
         tool_args=args,
         tool_context=tool_context,
         error=error
     )
+    return result
 
 # 1. Analysis Agent - General Purpose Explorer
 analysis_agent = Agent(
