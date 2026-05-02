@@ -4,7 +4,7 @@ This document visualizes the end-to-end flow from local development to productio
 
 ## 1. Visual Development Flow
 
-![ADK Development & Deployment Workflow](./nanobanana-output/editensure_the_local_development.png)
+![ADK Development & Deployment Workflow](./nanobanana-output/editimprove_the_overall_contrast.png)
 
 ```text
 [ LOCAL DEVELOPMENT ]          [ REMOTE SANDBOX ]          [ CI/CD PIPELINE ]          [ PRODUCTION ]
