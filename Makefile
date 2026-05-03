@@ -32,8 +32,6 @@ lint-agents:
 test-agents:
 	@echo "--- Testing Agents (Pytest) ---"
 	$(UV) run pytest tests/unit tests/integration
-	@echo "--- Running Behavioral Evals ---"
-	$(MAKE) eval
 
 # --- Application Track ---
 
