@@ -18,12 +18,18 @@ on:
   pull_request:
     branches:
       - main
+      - dev
     paths:
       - 'agents/**'
-      - 'data_ingestion/**'
+      - 'campaign-flow/**'
+      - 'frontend/**'
       - 'tests/**'
       - 'deployment/**'
+      - 'scripts/**'
+      - '.github/workflows/**'
       - 'uv.lock'
+      - 'Makefile'
+      - 'ci.sh'
 
 jobs:
   test:
@@ -44,19 +50,21 @@ jobs:
           create_credentials_file: true
           project_id: ${{ vars.CICD_PROJECT_ID }}
 
-
       - name: Set up Python 3.12
         uses: actions/setup-python@v4
         with:
           python-version: '3.12'
 
-      - name: Install uv and dependencies
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
         run: |
           pip install uv==0.8.13
           uv sync --locked --default-index https://pypi.org/simple
+          cd campaign-flow && npm install
 
-      - name: Run unit tests
-        run: uv run pytest tests/unit
-
-      - name: Run integration tests
-        run: uv run pytest tests/integration
+      - name: Run CI checks
+        run: chmod +x ci.sh && ./ci.sh

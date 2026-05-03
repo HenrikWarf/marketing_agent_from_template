@@ -1,7 +1,6 @@
 # Force uv to use public PyPI and ignore corporate wrappers/configs
-UV_BIN := $(shell which uv 2>/dev/null || echo "/Users/henrikw/.local/bin/uv")
-REAL_UV := /Users/henrikw/.local/bin/uv
-UV := UV_NO_CONFIG=1 UV_DEFAULT_INDEX=https://pypi.org/simple $(REAL_UV)
+UV_BIN := $(shell which uv 2>/dev/null || echo "uv")
+UV := UV_NO_CONFIG=1 UV_DEFAULT_INDEX=https://pypi.org/simple $(UV_BIN)
 
 .PHONY: setup gcp-setup lint test playground clean setup-hooks ui lint-agents lint-app test-agents test-app validate-contract
 
